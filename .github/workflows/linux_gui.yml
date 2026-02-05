@@ -1,4 +1,4 @@
-name: Qt6 test build
+name: Build GUI for Linux
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
     - 'tsMuxerGUI/**'
 
 jobs:
-  build-qt6-test:
+  build-linux-gui:
 
     runs-on: ubuntu-latest
     
@@ -22,8 +22,8 @@ jobs:
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
-        version: '6.6.*'
+        version: '6.7.*'
         modules: 'qtmultimedia'
       
-    - run: ./.github/workflows/qt6_test.sh
-      name: build-qt6-linux
+    - run: ./.github/workflows/linux_gui.sh
+      name: build-linux-gui
