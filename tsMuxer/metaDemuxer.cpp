@@ -6,6 +6,7 @@
 #include <fs/textfile.h>
 #include <types/types.h>
 #include <climits>
+#include <memory>
 
 #include "aacStreamReader.h"
 #include "ac3StreamReader.h"
@@ -561,7 +562,7 @@ DetectStreamRez METADemuxer::DetectStreamReader(const BufferedReaderManager& rea
     AVChapters chapters;
     int64_t fileDuration = 0;
     vector<CheckStreamRez> streams, Vstreams;
-    AbstractDemuxer* demuxer = nullptr;
+    std::unique_ptr<AbstractDemuxer> demuxer;
     auto unquoted = unquoteStr(fileName);
     string fileExt = strToLowerCase(extractFileExt(unquoted));
     AbstractStreamReader::ContainerType containerType = AbstractStreamReader::ContainerType::ctNone;
@@ -569,7 +570,7 @@ DetectStreamRez METADemuxer::DetectStreamReader(const BufferedReaderManager& rea
     bool clpiParsed = false;
     if (fileExt == "m2ts" || fileExt == "mts" || fileExt == "ssif")
     {
-        demuxer = new TSDemuxer(readManager, "");
+        demuxer = std::make_unique<TSDemuxer>(readManager, "");
         containerType = AbstractStreamReader::ContainerType::ctM2TS;
         string clpiFileName = findBluRayFile(extractFileDir(unquoted), "CLIPINF", extractFileName(unquoted) + ".clpi");
         if (!clpiFileName.empty())
@@ -577,27 +578,27 @@ DetectStreamRez METADemuxer::DetectStreamReader(const BufferedReaderManager& rea
     }
     else if (fileExt == "ts")
     {
-        demuxer = new TSDemuxer(readManager, "");
+        demuxer = std::make_unique<TSDemuxer>(readManager, "");
         containerType = AbstractStreamReader::ContainerType::ctTS;
     }
     else if (fileExt == "vob" || fileExt == "mpg")
     {
-        demuxer = new ProgramStreamDemuxer(readManager);
+        demuxer = std::make_unique<ProgramStreamDemuxer>(readManager);
         containerType = AbstractStreamReader::ContainerType::ctVOB;
     }
     else if (fileExt == "evo")
     {
-        demuxer = new ProgramStreamDemuxer(readManager);
+        demuxer = std::make_unique<ProgramStreamDemuxer>(readManager);
         containerType = AbstractStreamReader::ContainerType::ctEVOB;
     }
     else if (fileExt == "mkv" || fileExt == "mka" || fileExt == "mks")
     {
-        demuxer = new MatroskaDemuxer(readManager);
+        demuxer = std::make_unique<MatroskaDemuxer>(readManager);
         containerType = AbstractStreamReader::ContainerType::ctMKV;
     }
     else if (fileExt == "mp4" || fileExt == "m4v" || fileExt == "m4a" || fileExt == "mov")
     {
-        demuxer = new MovDemuxer(readManager);
+        demuxer = std::make_unique<MovDemuxer>(readManager);
         containerType = AbstractStreamReader::ContainerType::ctMOV;
     }
 
@@ -652,7 +653,7 @@ DetectStreamRez METADemuxer::DetectStreamReader(const BufferedReaderManager& rea
                 if (trackRez.lang == langB[i])
                     trackRez.lang = langT[i];
 
-            if (strStartWith(trackRez.codecInfo.programName, "A_") && dynamic_cast<TSDemuxer*>(demuxer))
+            if (strStartWith(trackRez.codecInfo.programName, "A_") && dynamic_cast<TSDemuxer*>(demuxer.get()))
             {
                 if (trackRez.trackID >= 0x1A00)
                     trackRez.isSecondary = true;
@@ -666,7 +667,6 @@ DetectStreamRez METADemuxer::DetectStreamReader(const BufferedReaderManager& rea
         chapters = demuxer->getChapters();
         if (calcDuration)
             fileDuration = demuxer->getFileDurationNano();
-        delete demuxer;
     }
     else
     {
@@ -674,22 +674,20 @@ DetectStreamRez METADemuxer::DetectStreamReader(const BufferedReaderManager& rea
         containerType = AbstractStreamReader::ContainerType::ctNone;
         if (!file.open(fileName.c_str(), File::ofRead))
             return {};
-        auto tmpBuffer = new uint8_t[DETECT_STREAM_BUFFER_SIZE];
-        int len = file.read(tmpBuffer, DETECT_STREAM_BUFFER_SIZE);
+        auto tmpBuffer = std::make_unique<uint8_t[]>(DETECT_STREAM_BUFFER_SIZE);
+        int len = file.read(tmpBuffer.get(), DETECT_STREAM_BUFFER_SIZE);
         if (fileExt == "sup")
             containerType = AbstractStreamReader::ContainerType::ctSUP;
         else if (fileExt == "pcm" || fileExt == "lpcm" || fileExt == "wav" || fileExt == "w64")
             containerType = AbstractStreamReader::ContainerType::ctLPCM;
         else if (fileExt == "srt")
             containerType = AbstractStreamReader::ContainerType::ctSRT;
-        CheckStreamRez trackRez = detectTrackReader(tmpBuffer, len, containerType, 0, 0);
+        CheckStreamRez trackRez = detectTrackReader(tmpBuffer.get(), len, containerType, 0, 0);
 
         if (strStartWith(trackRez.codecInfo.programName, "V_"))
             addTrack(Vstreams, trackRez);
         else
             addTrack(streams, trackRez);
-
-        delete[] tmpBuffer;
     }
     Vstreams.insert(Vstreams.end(), streams.begin(), streams.end());
 
@@ -724,90 +722,76 @@ CheckStreamRez METADemuxer::detectTrackReader(uint8_t* tmpBuffer, int len,
 {
     CheckStreamRez rez;
 
-    auto pgsReader = new PGSStreamReader();
+    auto pgsReader = std::make_unique<PGSStreamReader>();
     rez = pgsReader->checkStream(tmpBuffer, len, containerType, containerDataType, containerStreamIndex);
-    delete pgsReader;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto srtReader = new SRTStreamReader();
+    auto srtReader = std::make_unique<SRTStreamReader>();
     rez = srtReader->checkStream(tmpBuffer, len, containerType, containerDataType, containerStreamIndex);
-    delete srtReader;
     if (rez.codecInfo.codecID)
         return rez;
 
     if (len == 0)
         return rez;
 
-    auto lpcmReader = new LPCMStreamReader();
+    auto lpcmReader = std::make_unique<LPCMStreamReader>();
     rez = lpcmReader->checkStream(tmpBuffer, len, containerType, containerDataType, containerStreamIndex);
-    delete lpcmReader;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto h264codec = new H264StreamReader();
+    auto h264codec = std::make_unique<H264StreamReader>();
     rez = h264codec->checkStream(tmpBuffer, len);
-    delete h264codec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto dtscodec = new DTSStreamReader();
+    auto dtscodec = std::make_unique<DTSStreamReader>();
     rez = dtscodec->checkStream(tmpBuffer, len, containerType, containerDataType, containerStreamIndex);
-    delete dtscodec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto ac3codec = new AC3StreamReader();
+    auto ac3codec = std::make_unique<AC3StreamReader>();
     rez = ac3codec->checkStream(tmpBuffer, len, containerType, containerDataType, containerStreamIndex);
-    delete ac3codec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto mlpcodec = new MLPStreamReader();
+    auto mlpcodec = std::make_unique<MLPStreamReader>();
     rez = mlpcodec->checkStream(tmpBuffer, len, containerType, containerDataType, containerStreamIndex);
-    delete mlpcodec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto aaccodec = new AACStreamReader();
+    auto aaccodec = std::make_unique<AACStreamReader>();
     rez = aaccodec->checkStream(tmpBuffer, len, containerType, containerDataType, containerStreamIndex);
-    delete aaccodec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto vc1ccodec = new VC1StreamReader();
+    auto vc1ccodec = std::make_unique<VC1StreamReader>();
     rez = vc1ccodec->checkStream(tmpBuffer, len);
-    delete vc1ccodec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto hevcCodec = new HEVCStreamReader();
+    auto hevcCodec = std::make_unique<HEVCStreamReader>();
     rez = hevcCodec->checkStream(tmpBuffer, len);
-    delete hevcCodec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto vvcCodec = new VVCStreamReader();
+    auto vvcCodec = std::make_unique<VVCStreamReader>();
     rez = vvcCodec->checkStream(tmpBuffer, len);
-    delete vvcCodec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto mpeg2ccodec = new MPEG2StreamReader();
+    auto mpeg2ccodec = std::make_unique<MPEG2StreamReader>();
     rez = mpeg2ccodec->checkStream(tmpBuffer, len);
-    delete mpeg2ccodec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto mpegAudioCodec = new MpegAudioStreamReader();
+    auto mpegAudioCodec = std::make_unique<MpegAudioStreamReader>();
     rez = mpegAudioCodec->checkStream(tmpBuffer, len, containerType, containerDataType, containerStreamIndex);
-    delete mpegAudioCodec;
     if (rez.codecInfo.codecID)
         return rez;
 
-    auto supReader = new DVBSubStreamReader();
+    auto supReader = std::make_unique<DVBSubStreamReader>();
     rez = supReader->checkStream(tmpBuffer, len, containerType, containerDataType, containerStreamIndex);
-    delete supReader;
     if (rez.codecInfo.codecID)
         return rez;
 

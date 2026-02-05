@@ -1,6 +1,7 @@
 #include "hevcStreamReader.h"
 
 #include <fs/systemlog.h>
+#include <memory>
 
 #include "hevc.h"
 #include "nalUnits.h"
@@ -371,8 +372,8 @@ void HEVCStreamReader::updateStreamFps(void* nalUnit, uint8_t* buff, uint8_t* ne
     m_vpsSizeDiff = 0;
     const auto vps = static_cast<HevcVpsUnit*>(nalUnit);
     vps->setFPS(m_fps);
-    const auto tmpBuffer = new uint8_t[vps->nalBufferLen() + 16];
-    const int newSpsLen = vps->serializeBuffer(tmpBuffer, tmpBuffer + vps->nalBufferLen() + 16);
+    auto tmpBuffer = std::make_unique<uint8_t[]>(vps->nalBufferLen() + 16);
+    const int newSpsLen = vps->serializeBuffer(tmpBuffer.get(), tmpBuffer.get() + vps->nalBufferLen() + 16);
     if (newSpsLen == -1)
         THROW(ERR_COMMON, "Not enough buffer")
 
@@ -384,9 +385,7 @@ void HEVCStreamReader::updateStreamFps(void* nalUnit, uint8_t* buff, uint8_t* ne
         memmove(nextNal + m_vpsSizeDiff, nextNal, m_bufEnd - nextNal);
         m_bufEnd += m_vpsSizeDiff;
     }
-    memcpy(buff, tmpBuffer, newSpsLen);
-
-    delete[] tmpBuffer;
+    memcpy(buff, tmpBuffer.get(), newSpsLen);
 }
 
 unsigned HEVCStreamReader::getStreamWidth() const { return m_sps ? m_sps->pic_width_in_luma_samples : 0; }

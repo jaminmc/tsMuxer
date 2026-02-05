@@ -13,7 +13,7 @@ jobs:
       version: ${{ steps.check.outputs.version }}
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       name: checkout
       with:
         fetch-depth: 0
@@ -59,7 +59,7 @@ jobs:
       - /workspace:/github/workspace
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       name: checkout
       
     - run: rm -f bin/.gitkeep
@@ -94,14 +94,14 @@ jobs:
     runs-on: macos-latest
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       name: checkout
     
     - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+      uses: jurplel/install-qt-action@v4
       with:
-        setup-python: false
-        py7zrversion: '==0.20.*'
+        version: '6.6.*'
+        modules: 'qtmultimedia'
       
     - run: ./scripts/build_macos_native.sh
       name: build-for-mac

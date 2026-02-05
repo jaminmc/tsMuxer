@@ -1,6 +1,8 @@
 #ifndef MUXER_MANAGER_H_
 #define MUXER_MANAGER_H_
 
+#include <memory>
+
 #include "abstractMuxer.h"
 #include "bufferedFileWriter.h"
 #include "bufferedReaderManager.h"
@@ -67,12 +69,12 @@ class MuxerManager final
 
    private:
     void preinitMux(const std::string& outFileName, FileFactory* fileFactory);
-    AbstractMuxer* createMuxer();
+    std::unique_ptr<AbstractMuxer> createMuxer();
     void asyncWriteBlock(const WriterData& data) const;
     void checkTrackList(const std::vector<StreamInfo>& ci) const;
 
-    AbstractMuxer* m_mainMuxer;
-    AbstractMuxer* m_subMuxer;
+    std::unique_ptr<AbstractMuxer> m_mainMuxer;
+    std::unique_ptr<AbstractMuxer> m_subMuxer;
 
     bool m_asyncMode;
     // int32_t m_fileBlockSize;
@@ -81,7 +83,7 @@ class MuxerManager final
     METADemuxer m_metaDemuxer;
     int64_t m_cutStart;
     int64_t m_cutEnd;
-    BufferedFileWriter* m_fileWriter;
+    std::unique_ptr<BufferedFileWriter> m_fileWriter;
     AbstractMuxerFactory& m_factory;
     bool m_allowStereoMux;
     std::set<int> m_subStreamIndex;

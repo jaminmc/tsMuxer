@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <memory>
 
 #include <fs/systemlog.h>
 
@@ -410,14 +411,13 @@ uint8_t* VC1StreamReader::findNextFrame(uint8_t* buffer) const
 void VC1StreamReader::updateStreamFps(void* nalUnit, uint8_t* buff, uint8_t* nextNal, const int oldSpsLen)
 {
     m_sequence.setFPS(m_fps);
-    const auto tmpBuffer = new uint8_t[oldSpsLen + 16];
-    const int64_t newSpsLen = m_sequence.vc1_escape_buffer(tmpBuffer);
+    auto tmpBuffer = std::make_unique<uint8_t[]>(oldSpsLen + 16);
+    const int64_t newSpsLen = m_sequence.vc1_escape_buffer(tmpBuffer.get());
     if (newSpsLen != oldSpsLen)
     {
         const int64_t sizeDiff = newSpsLen - oldSpsLen;
         memmove(nextNal + sizeDiff, nextNal, m_bufEnd - nextNal);
         m_bufEnd += sizeDiff;
     }
-    memcpy(buff + 1, tmpBuffer, newSpsLen);
-    delete[] tmpBuffer;
+    memcpy(buff + 1, tmpBuffer.get(), newSpsLen);
 }

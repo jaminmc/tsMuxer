@@ -58,7 +58,10 @@ class SingleFileMuxer final : public AbstractMuxer
 class SingleFileMuxerFactory final : public AbstractMuxerFactory
 {
    public:
-    AbstractMuxer* newInstance(MuxerManager* owner) const override { return new SingleFileMuxer(owner); }
+    [[nodiscard]] std::unique_ptr<AbstractMuxer> newInstance(MuxerManager* owner) const override
+    {
+        return std::make_unique<SingleFileMuxer>(owner);
+    }
 };
 
 #endif

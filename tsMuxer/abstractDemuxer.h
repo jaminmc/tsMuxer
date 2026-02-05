@@ -53,7 +53,9 @@ class MemoryBlock
 
     [[nodiscard]] size_t size() const { return m_size; }
 
-    uint8_t* data() { return m_data.empty() ? nullptr : m_data.data(); }
+    [[nodiscard]] uint8_t* data() { return m_data.empty() ? nullptr : m_data.data(); }
+
+    [[nodiscard]] const uint8_t* data() const { return m_data.empty() ? nullptr : m_data.data(); }
 
     [[nodiscard]] bool isEmpty() const { return m_size == 0; }
 
@@ -106,7 +108,7 @@ class AbstractDemuxer
     virtual void readClose() = 0;
     virtual int64_t getDemuxedSize() = 0;
 
-    virtual uint64_t getDuration() { return 0; }
+    [[nodiscard]] virtual uint64_t getDuration() { return 0; }
     virtual void setTimeOffset(const int64_t offset) { m_timeOffset = offset; }
     virtual int simpleDemuxBlock(DemuxedData& demuxedData, const PIDSet& acceptedPIDs, int64_t& discardSize)
     {
@@ -114,17 +116,17 @@ class AbstractDemuxer
         return 0;
     }
     virtual void terminate() {}
-    virtual int getLastReadRez() = 0;
+    [[nodiscard]] virtual int getLastReadRez() = 0;
     virtual void getTrackList(std::map<int32_t, TrackInfo>& trackList) {}
     virtual void setFileIterator(FileNameIterator*) {}
 
-    virtual uint32_t getFileBlockSize() { return m_fileBlockSize; }
+    [[nodiscard]] virtual uint32_t getFileBlockSize() { return m_fileBlockSize; }
 
-    virtual int64_t getTrackDelay(int32_t pid) { return 0; }
-    virtual std::vector<AVChapter> getChapters() { return {}; }
-    virtual double getTrackFps(uint32_t trackId) { return 0.0; }
+    [[nodiscard]] virtual int64_t getTrackDelay(int32_t pid) { return 0; }
+    [[nodiscard]] virtual std::vector<AVChapter> getChapters() { return {}; }
+    [[nodiscard]] virtual double getTrackFps(uint32_t trackId) { return 0.0; }
 
-    SubTrackFilter* getPidFilter(const int pid)
+    [[nodiscard]] SubTrackFilter* getPidFilter(const int pid)
     {
         const PIDFilters::const_iterator itr = m_pidFilters.find(pid);
         return itr != m_pidFilters.end() ? itr->second : nullptr;

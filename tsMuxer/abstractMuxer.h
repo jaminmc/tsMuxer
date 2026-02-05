@@ -4,6 +4,7 @@
 #include <fs/file.h>
 
 #include <map>
+#include <memory>
 #include <string>
 
 #include "metaDemuxer.h"
@@ -53,7 +54,7 @@ class AbstractMuxerFactory
     AbstractMuxerFactory() = default;
     virtual ~AbstractMuxerFactory() = default;
 
-    virtual AbstractMuxer* newInstance(MuxerManager* owner) const = 0;
+    [[nodiscard]] virtual std::unique_ptr<AbstractMuxer> newInstance(MuxerManager* owner) const = 0;
 };
 
 #endif

@@ -2,6 +2,15 @@
 
 The following sections outline how to build tsMuxer and tsMuxerGUI for your chosen platform.
 
+## Requirements
+
+- **CMake**: 3.12 or later
+- **C++ Compiler**: C++20 support required
+  - GCC 10 or later
+  - Clang 11 or later
+  - MSVC 2019 or later
+- **Qt**: Qt6 (recommended) or Qt5 for the GUI component
+
 ## Docker (All Platforms)
 
 You can use our [Docker container](https://github.com/justdan96/tsmuxer_build) to build tsMuxer for your chosen platform. To build the GUI you will need to follow the instructions specifically for your platform.
@@ -76,9 +85,19 @@ libfreetype6-dev \
 zlib1g-dev \
 ```
 
-If you also intend to build the GUI then you require:
+If you also intend to build the GUI then you require Qt6 (recommended) or Qt5:
 
-64-bit:
+Qt6 (recommended):
+```
+sudo apt-get install qt6-base-dev \
+qt6-tools-dev \
+qt6-tools-dev-tools \
+qt6-l10n-tools \
+qt6-multimedia-dev \
+libqt6multimedia6
+```
+
+Or Qt5 (legacy):
 ```
 sudo apt-get install qt5-default \
 qt5-qmake \
@@ -353,24 +372,24 @@ Next we need to install Qt. Please note that Qt through Homebrew has issues with
 brew uninstall qt
 ```
 
-We will use `aqtinstall` to download and install the offical Qt for Mac package. Qt 6.2.2 officially supports Apple silicon so this version is recommended. To install Qt6 for Mac we will need to install `pip`, use that to install `aqtinstall`, use `aqtinstall` to download the latest version of Qt for Mac before finally copying the installation and enabling it to be used system-wide.
+We will use `aqtinstall` to download and install the offical Qt for Mac package. Qt 6.6 or later officially supports Apple silicon and is the recommended version. To install Qt6 for Mac we will need to install `pip`, use that to install `aqtinstall`, use `aqtinstall` to download the latest version of Qt for Mac before finally copying the installation and enabling it to be used system-wide.
 
 ```
 # install pip
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 python3 get-pip.py
-# install aqtinstall and download Qt 6.2.2
+# install aqtinstall and download Qt 6.6
 pip install aqtinstall
-aqt install-qt mac desktop 6.2.2 -m qtmultimedia
+aqt install-qt mac desktop 6.6.2 -m qtmultimedia
 # install Qt to /opt/qt
 sudo mkdir /opt/qt
-sudo cp -r ./6.2.2/macos/* /opt/qt/
+sudo cp -r ./6.6.2/macos/* /opt/qt/
 # make Qt bin folder available in PATH
 echo 'export PATH=/opt/qt/bin:$PATH' >> $HOME/.zprofile
 . $HOME/.zprofile
 # cleanup temporary files
 rm -f get-pip.py
-rm -rf ./6.2.2
+rm -rf ./6.6.2
 ```
 
 With all of those requirements met we can now compile the programs. Simply run `./scripts/build_macos_native.sh` from the repository folder. Upon completion the executables will be available in the ./build/bin folder.

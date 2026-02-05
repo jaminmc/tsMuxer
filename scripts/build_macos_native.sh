@@ -7,9 +7,9 @@ export MACOSX_DEPLOYMENT_TARGET=10.15
 
 brew install freetype
 
-# use Qt5 by default but try to query from environment
+# use Qt6 by default but try to query from environment
 if ! qtver=$(qmake -query QT_VERSION | cut -d'.' -f1); then
-  qtver=5
+  qtver=6
 fi
 
 mkdir build

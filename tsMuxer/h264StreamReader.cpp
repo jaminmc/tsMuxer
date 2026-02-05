@@ -1,6 +1,7 @@
 #include "h264StreamReader.h"
 
 #include <fs/systemlog.h>
+#include <memory>
 
 #include "avCodecs.h"
 #include "tsPacket.h"
@@ -483,8 +484,8 @@ void H264StreamReader::updateStreamFps(void *nalUnit, uint8_t *buff, uint8_t *ne
 {
     const auto sps = static_cast<SPSUnit *>(nalUnit);
     sps->setFps(m_fps);
-    const auto tmpBuffer = new uint8_t[oldSpsLen + 16];
-    const long newSpsLen = sps->serializeBuffer(tmpBuffer, tmpBuffer + oldSpsLen + 16, false);
+    auto tmpBuffer = std::make_unique<uint8_t[]>(oldSpsLen + 16);
+    const long newSpsLen = sps->serializeBuffer(tmpBuffer.get(), tmpBuffer.get() + oldSpsLen + 16, false);
     if (newSpsLen == -1)
         THROW(ERR_COMMON, "Not enough buffer")
     if (newSpsLen != oldSpsLen)
@@ -496,8 +497,7 @@ void H264StreamReader::updateStreamFps(void *nalUnit, uint8_t *buff, uint8_t *ne
         m_bufEnd += sizeDiff;
         // m_dataLen += sizeDiff;
     }
-    memcpy(buff, tmpBuffer, newSpsLen);
-    delete[] tmpBuffer;
+    memcpy(buff, tmpBuffer.get(), newSpsLen);
 }
 
 void H264StreamReader::updateHRDParam(SPSUnit *sps) const

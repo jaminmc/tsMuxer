@@ -49,7 +49,12 @@ or are worried that the code isn't being followed, please contact the owner of t
 
 ## Language
 
-tsMuxer is written in C++. It can be compiled for Windows, Linux and Mac. 
+tsMuxer is written in C++20. It can be compiled for Windows, Linux and Mac.
+
+**Build Requirements:**
+- CMake 3.12 or later
+- C++20 compatible compiler (GCC 10+, Clang 11+, MSVC 2019+)
+- Qt6 (recommended) or Qt5 for the GUI 
 
 ## History
 

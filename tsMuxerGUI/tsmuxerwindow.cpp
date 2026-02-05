@@ -27,6 +27,38 @@
 #define setTabStopDistance setTabStopWidth
 #endif
 
+// Qt5/Qt6 compatibility helpers for deprecated QString methods
+namespace QtCompat {
+inline QString strLeft(const QString &str, qsizetype n)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return str.first(n);
+#else
+    return str.left(n);
+#endif
+}
+
+inline QString strRight(const QString &str, qsizetype n)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return str.last(n);
+#else
+    return str.right(n);
+#endif
+}
+
+inline QString strMid(const QString &str, qsizetype pos, qsizetype len = -1)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (len < 0)
+        return str.sliced(pos);
+    return str.sliced(pos, len);
+#else
+    return str.mid(pos, len);
+#endif
+}
+}  // namespace QtCompat
+
 #include "ui_tsmuxerwindow.h"
 
 namespace
@@ -133,15 +165,15 @@ QString unquoteStr(QString val)
         return val;
     if (val.at(0) == '\"')
     {
-        if (val.right(1) == "\"")
-            return val.mid(1, val.length() - 2);
+        if (QtCompat::strRight(val, 1) == "\"")
+            return QtCompat::strMid(val, 1, val.length() - 2);
         else
-            return val.mid(1, val.length() - 1);
+            return QtCompat::strMid(val, 1, val.length() - 1);
     }
     else
     {
-        if (val.right(1) == "\"")
-            return val.mid(0, val.length() - 1);
+        if (QtCompat::strRight(val, 1) == "\"")
+            return QtCompat::strMid(val, 0, val.length() - 1);
         else
             return val;
     }
@@ -209,8 +241,8 @@ double timeToFloat(const QString &chapterStr)
 QString changeFileExt(const QString &value, const QString &newExt)
 {
     QFileInfo fi(unquoteStr(value));
-    if (fi.suffix().length() > 0 || (!value.isEmpty() && value.right(1) == "."))
-        return unquoteStr(value.left(value.length() - fi.suffix().length()) + newExt);
+    if (fi.suffix().length() > 0 || (!value.isEmpty() && QtCompat::strRight(value, 1) == "."))
+        return unquoteStr(QtCompat::strLeft(value, value.length() - fi.suffix().length()) + newExt);
     else
         return unquoteStr(value) + "." + newExt;
 }
@@ -220,8 +252,8 @@ QString fpsTextToFpsStr(const QString &fpsText)
     int p = fpsText.indexOf('/');
     if (p >= 0)
     {
-        auto left = fpsText.mid(0, p).toFloat();
-        auto right = fpsText.mid(p + 1).toFloat();
+        auto left = QtCompat::strMid(fpsText, 0, p).toFloat();
+        auto right = QtCompat::strMid(fpsText, p + 1).toFloat();
         return QString::number(left / right, 'f', 3);
     }
     else
@@ -242,7 +274,7 @@ float extractFloatFromDescr(const QString &str, const QString &pattern)
             while (p2 < str.length() &&
                    ((str.at(p2) >= '0' && str.at(p2) <= '9') || str.at(p2) == '.' || str.at(p2) == '-'))
                 p2++;
-            return str.mid(p, p2 - p).toFloat();
+            return QtCompat::strMid(str, p, p2 - p).toFloat();
         }
     }
     catch (...)
@@ -524,7 +556,7 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
         p = procStdOutput[i].indexOf("Track ID:    ");
         if (p >= 0)
         {
-            lastTrackID = procStdOutput[i].mid(QString("Track ID:    ").length()).toInt();
+            lastTrackID = QtCompat::strMid(procStdOutput[i], QString("Track ID:    ").length()).toInt();
             codecList << QtvCodecInfo();
             codecInfo = &(codecList.back());
             codecInfo->trackID = lastTrackID;
@@ -539,7 +571,7 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
                 codecInfo = &(codecList.back());
             }
             codecInfo->descr = "Can't detect codec";
-            codecInfo->displayName = procStdOutput[i].mid(QString("Stream type: ").length());
+            codecInfo->displayName = QtCompat::strMid(procStdOutput[i], QString("Stream type: ").length());
             /* Add SEI and SPS only with AVC and MVC (currently disabled)
             if (codecInfo->displayName != "H.264" && codecInfo->displayName != "MVC")
             {
@@ -556,23 +588,23 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
         }
         p = procStdOutput[i].indexOf("Stream ID:   ");
         if (p >= 0)
-            codecInfo->programName = procStdOutput[i].mid(QString("Stream ID:   ").length());
+            codecInfo->programName = QtCompat::strMid(procStdOutput[i], QString("Stream ID:   ").length());
         p = procStdOutput[i].indexOf("Stream info: ");
         if (p >= 0)
-            codecInfo->descr = procStdOutput[i].mid(QString("Stream info: ").length());
+            codecInfo->descr = QtCompat::strMid(procStdOutput[i], QString("Stream info: ").length());
         p = procStdOutput[i].indexOf("Stream lang: ");
         if (p >= 0)
-            codecInfo->lang = procStdOutput[i].mid(QString("Stream lang: ").length());
+            codecInfo->lang = QtCompat::strMid(procStdOutput[i], QString("Stream lang: ").length());
         p = procStdOutput[i].indexOf("Stream delay: ");
         if (p >= 0)
         {
-            tmpStr = procStdOutput[i].mid(QString("Stream delay: ").length());
+            tmpStr = QtCompat::strMid(procStdOutput[i], QString("Stream delay: ").length());
             codecInfo->delay = tmpStr.toInt();
         }
         p = procStdOutput[i].indexOf("subTrack: ");
         if (p >= 0)
         {
-            tmpStr = procStdOutput[i].mid(QString("subTrack: ").length());
+            tmpStr = QtCompat::strMid(procStdOutput[i], QString("subTrack: ").length());
             codecInfo->subTrack = tmpStr.toInt();
         }
         p = procStdOutput[i].indexOf("Secondary: 1");
@@ -588,7 +620,7 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
 
         if (procStdOutput[i].startsWith("Error: "))
         {
-            tmpStr = procStdOutput[i].mid(QString("Error: ").length());
+            tmpStr = QtCompat::strMid(procStdOutput[i], QString("Error: ").length());
             QMessageBox msgBox(this);
             msgBox.setWindowTitle(tr("Not supported"));
             msgBox.setText(tmpStr);
@@ -598,12 +630,12 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
         }
         else if (procStdOutput[i].startsWith("File #"))
         {
-            tmpStr = procStdOutput[i].mid(17);  // todo: check here
+            tmpStr = QtCompat::strMid(procStdOutput[i], 17);  // todo: check here
             mplsFileList << MPLSFileInfo(tmpStr, 0.0);
         }
         else if (procStdOutput[i].startsWith("Duration:"))
         {
-            tmpStr = procStdOutput[i].mid(10);  // todo: check here
+            tmpStr = QtCompat::strMid(procStdOutput[i], 10);  // todo: check here
             if (!mplsFileList.empty())
             {
                 mplsFileList.last().duration = timeToFloat(tmpStr);
@@ -615,12 +647,12 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
         }
         else if (procStdOutput[i].startsWith("Base view: "))
         {
-            tmpStr = procStdOutput[i].mid(11);  // todo: check here
+            tmpStr = QtCompat::strMid(procStdOutput[i], 11);  // todo: check here
             ui->rightEyeCheckBox->setChecked(tmpStr.trimmed() == "right-eye");
         }
         else if (procStdOutput[i].startsWith("start-time: "))
         {
-            tmpStr = procStdOutput[i].mid(12);
+            tmpStr = QtCompat::strMid(procStdOutput[i], 12);
             if (tmpStr.contains(':'))
             {
                 double secondsF = timeToFloat(tmpStr);
@@ -640,7 +672,7 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
                 firstMark = false;
                 ui->radioButtonCustomChapters->setChecked(true);
             }
-            QStringList stringList = procStdOutput[i].mid(7).split(' ');
+            QStringList stringList = QtCompat::strMid(procStdOutput[i], 7).split(' ');
             for (int k = 0; k < stringList.size(); ++k)
                 if (!stringList[k].isEmpty())
                     chapters << timeToFloat(stringList[k]);
@@ -1325,7 +1357,7 @@ void TsMuxerWindow::updateCustomChapters()
         QListWidgetItem *item = ui->inputFilesLV->item(i);
         if (item->data(MplsItemRole).toInt() == MPLS_M2TS)
             continue;
-        if (item->text().left(4) == FILE_JOIN_PREFIX)
+        if (QtCompat::strLeft(item->text(), 4) == FILE_JOIN_PREFIX)
             offset += prevDuration;
         else
             offset = 0;
@@ -1348,9 +1380,9 @@ void splitLines(const QString &str, QList<QString> &strList)
     for (int i = 0; i < strList.size(); ++i)
     {
         if (!strList[i].isEmpty() && strList[i].at(0) == '\r')
-            strList[i] = strList[i].mid(1);
+            strList[i] = QtCompat::strMid(strList[i], 1);
         else if (!strList[i].isEmpty() && strList[i].at(strList[i].length() - 1) == '\r')
-            strList[i] = strList[i].mid(0, strList[i].length() - 1);
+            strList[i] = QtCompat::strMid(strList[i], 0, strList[i].length() - 1);
     }
 }
 
@@ -1376,7 +1408,7 @@ void TsMuxerWindow::addLines(const QByteArray &arr, QList<QString> &outList, boo
                     break;
                 }
             }
-            QString progress = strList[i].mid(numStartPos, p - numStartPos);
+            QString progress = QtCompat::strMid(strList[i], numStartPos, p - numStartPos);
             float tmpVal = progress.toFloat();
             if (qAbs(tmpVal) > 0 && runInMuxMode)
                 muxForm->setProgress(int(double(tmpVal * 10) + 0.5));  // todo: uncomment here
@@ -2073,11 +2105,11 @@ void TsMuxerWindow::onRemoveBtnClick()
     {
         if (ui->inputFilesLV->currentItem()->data(MplsItemRole).toInt() == MPLS_PRIMARY)
             delMplsM2ts = true;
-        else if (ui->inputFilesLV->currentItem()->text().left(4) != FILE_JOIN_PREFIX)
+        else if (QtCompat::strLeft(ui->inputFilesLV->currentItem()->text(), 4) != FILE_JOIN_PREFIX)
         {
             QString text = ui->inputFilesLV->item(idx + 1)->text();
-            if (text.length() >= 4 && text.left(4) == FILE_JOIN_PREFIX)
-                ui->inputFilesLV->item(idx + 1)->setText(text.mid(4));
+            if (text.length() >= 4 && QtCompat::strLeft(text, 4) == FILE_JOIN_PREFIX)
+                ui->inputFilesLV->item(idx + 1)->setText(QtCompat::strMid(text, 4));
         }
     }
 
@@ -2091,7 +2123,7 @@ void TsMuxerWindow::onRemoveBtnClick()
         while (idx < ui->inputFilesLV->count())
         {
             QString text = ui->inputFilesLV->item(idx)->text();
-            if (text.length() >= 4 && text.left(4) == FILE_JOIN_PREFIX)
+            if (text.length() >= 4 && QtCompat::strLeft(text, 4) == FILE_JOIN_PREFIX)
             {
                 delTracksByFileName(myUnquoteStr(ui->inputFilesLV->item(idx)->data(FileNameRole).toString()));
                 ui->inputFilesLV->takeItem(idx);
@@ -2330,7 +2362,7 @@ void TsMuxerWindow::RadioButtonMuxClick()
         if (!oldFileName.isEmpty())
         {
             ui->outFileName->setText(QDir::toNativeSeparators(ui->outFileName->text()));
-            if (!ui->outFileName->text().isEmpty() && ui->outFileName->text().right(1) != QDir::separator())
+            if (!ui->outFileName->text().isEmpty() && QtCompat::strRight(ui->outFileName->text(), 1) != QDir::separator())
                 ui->outFileName->setText(ui->outFileName->text() + QDir::separator());
             ui->outFileName->setText(ui->outFileName->text() + oldFileName);
             oldFileName.clear();

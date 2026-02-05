@@ -16,13 +16,14 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v4
       name: checkout
       
     - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+      uses: jurplel/install-qt-action@v4
       with:
-        version: '6.2.0'
+        version: '6.6.*'
+        modules: 'qtmultimedia'
       
     - run: ./.github/workflows/qt6_test.sh
       name: build-qt6-linux

@@ -1,6 +1,7 @@
 #include "vvcStreamReader.h"
 
 #include <fs/systemlog.h>
+#include <memory>
 
 #include "nalUnits.h"
 #include "tsMuxer.h"
@@ -168,8 +169,8 @@ void VVCStreamReader::updateStreamFps(void* nalUnit, uint8_t* buff, uint8_t* nex
     m_vpsSizeDiff = 0;
     const auto vps = static_cast<VvcVpsUnit*>(nalUnit);
     vps->setFPS(m_fps);
-    const auto tmpBuffer = new uint8_t[vps->nalBufferLen() + 16];
-    const long newSpsLen = vps->serializeBuffer(tmpBuffer, tmpBuffer + vps->nalBufferLen() + 16);
+    auto tmpBuffer = std::make_unique<uint8_t[]>(vps->nalBufferLen() + 16);
+    const long newSpsLen = vps->serializeBuffer(tmpBuffer.get(), tmpBuffer.get() + vps->nalBufferLen() + 16);
     if (newSpsLen == -1)
         THROW(ERR_COMMON, "Not enough buffer")
 
@@ -181,9 +182,7 @@ void VVCStreamReader::updateStreamFps(void* nalUnit, uint8_t* buff, uint8_t* nex
         memmove(nextNal + m_vpsSizeDiff, nextNal, m_bufEnd - nextNal);
         m_bufEnd += m_vpsSizeDiff;
     }
-    memcpy(buff, tmpBuffer, newSpsLen);
-
-    delete[] tmpBuffer;
+    memcpy(buff, tmpBuffer.get(), newSpsLen);
 }
 
 unsigned VVCStreamReader::getStreamWidth() const { return m_sps ? m_sps->pic_width_max_in_luma_samples : 0; }

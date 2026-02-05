@@ -1,15 +1,11 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.12)
 project(tsMuxerGUI CXX)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-if(CMAKE_VERSION VERSION_LESS "3.7.0")
-  set(CMAKE_INCLUDE_CURRENT_DIR ON)
-endif()
-
-set(QT_VERSION 5 CACHE STRING "Qt version to use")
+set(QT_VERSION 6 CACHE STRING "Qt version to use")
 set_property(CACHE QT_VERSION PROPERTY STRINGS 5 6)
 
 set(qt_ver_pfx "Qt${QT_VERSION}")

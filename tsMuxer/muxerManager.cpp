@@ -43,10 +43,8 @@ MuxerManager::MuxerManager(const BufferedReaderManager& readManager, AbstractMux
     : m_metaDemuxer(readManager), m_factory(factory)
 {
     m_asyncMode = true;
-    m_fileWriter = nullptr;
     m_cutStart = 0;
     m_cutEnd = 0;
-    m_mainMuxer = m_subMuxer = nullptr;
     m_allowStereoMux = false;
     m_interleave = false;
     m_subBlockFinished = false;
@@ -58,11 +56,7 @@ MuxerManager::MuxerManager(const BufferedReaderManager& readManager, AbstractMux
     m_demuxMode = false;
 }
 
-MuxerManager::~MuxerManager()
-{
-    delete m_mainMuxer;
-    delete m_subMuxer;
-}
+MuxerManager::~MuxerManager() = default;
 
 void MuxerManager::preinitMux(const std::string& outFileName, FileFactory* fileFactory)
 {
@@ -87,7 +81,7 @@ void MuxerManager::preinitMux(const std::string& outFileName, FileFactory* fileF
             if (!m_subMuxer)
             {
                 m_subMuxer = m_factory.newInstance(this);
-                const auto tsMuxer = dynamic_cast<TSMuxer*>(m_subMuxer);
+                const auto tsMuxer = dynamic_cast<TSMuxer*>(m_subMuxer.get());
                 if (tsMuxer)
                     tsMuxer->setPtsOffset(m_ptsOffset);
                 m_subMuxer->parseMuxOpt(m_muxOpts);
@@ -98,7 +92,7 @@ void MuxerManager::preinitMux(const std::string& outFileName, FileFactory* fileF
             if (!m_mainMuxer)
             {
                 m_mainMuxer = m_factory.newInstance(this);
-                const auto tsMuxer = dynamic_cast<TSMuxer*>(m_mainMuxer);
+                const auto tsMuxer = dynamic_cast<TSMuxer*>(m_mainMuxer.get());
                 if (tsMuxer)
                     tsMuxer->setPtsOffset(m_ptsOffset);
                 m_mainMuxer->parseMuxOpt(m_muxOpts);
@@ -132,8 +126,8 @@ void MuxerManager::preinitMux(const std::string& outFileName, FileFactory* fileF
 
     if (m_subMuxer && m_mainMuxer)
     {
-        m_subMuxer->setSubMode(m_mainMuxer, mvcTrackFirst);
-        m_mainMuxer->setMasterMode(m_subMuxer, !mvcTrackFirst);
+        m_subMuxer->setSubMode(m_mainMuxer.get(), mvcTrackFirst);
+        m_mainMuxer->setMasterMode(m_subMuxer.get(), !mvcTrackFirst);
     }
 
     for (StreamInfo& si : ci)
@@ -209,7 +203,7 @@ void MuxerManager::doMux(const string& outFileName, FileFactory* fileFactory)
 {
     preinitMux(outFileName, fileFactory);
 
-    m_fileWriter = new BufferedFileWriter();
+    m_fileWriter = std::make_unique<BufferedFileWriter>();
     AVPacket avPacket;
 
     while (true)
@@ -246,9 +240,7 @@ void MuxerManager::doMux(const string& outFileName, FileFactory* fileFactory)
     if (m_subMuxer)
         m_subMuxer->close();
 
-    delete m_fileWriter;
-
-    m_fileWriter = nullptr;
+    m_fileWriter.reset();
 }
 
 int MuxerManager::addStream(const string& codecName, const string& fileName, const map<string, string>& addParams)
@@ -280,7 +272,7 @@ bool MuxerManager::openMetaFile(const string& fileName)
 
 void MuxerManager::muxBlockFinished(const AbstractMuxer* muxer)
 {
-    if (muxer == m_subMuxer)
+    if (muxer == m_subMuxer.get())
         m_subBlockFinished = true;
     else
         m_mainBlockFinished = true;
@@ -304,7 +296,7 @@ void MuxerManager::asyncWriteBuffer(const AbstractMuxer* muxer, uint8_t* buff, c
     data.m_mainFile = dstFile;
     data.m_command = WriterData::Commands::wdWrite;
 
-    if (m_interleave && muxer == m_mainMuxer)
+    if (m_interleave && muxer == m_mainMuxer.get())
     {
         // do interleave of SSIF blocks. Place sub channel blocks first, delay main muxer blocks
         m_delayedData.push_back(data);
@@ -404,11 +396,11 @@ void MuxerManager::waitForWriting() const
     while (!m_fileWriter->isQueueEmpty()) Process::sleep(1);
 }
 
-AbstractMuxer* MuxerManager::createMuxer() { return m_factory.newInstance(this); }
+std::unique_ptr<AbstractMuxer> MuxerManager::createMuxer() { return m_factory.newInstance(this); }
 
-AbstractMuxer* MuxerManager::getMainMuxer() const { return m_mainMuxer; }
+AbstractMuxer* MuxerManager::getMainMuxer() const { return m_mainMuxer.get(); }
 
-AbstractMuxer* MuxerManager::getSubMuxer() const { return m_subMuxer; }
+AbstractMuxer* MuxerManager::getSubMuxer() const { return m_subMuxer.get(); }
 
 bool MuxerManager::isStereoMode() const { return m_subMuxer != nullptr; }
 

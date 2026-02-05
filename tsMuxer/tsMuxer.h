@@ -222,7 +222,10 @@ class TSMuxer final : public AbstractMuxer
 class TSMuxerFactory final : public AbstractMuxerFactory
 {
    public:
-    AbstractMuxer* newInstance(MuxerManager* owner) const override { return new TSMuxer(owner); }
+    [[nodiscard]] std::unique_ptr<AbstractMuxer> newInstance(MuxerManager* owner) const override
+    {
+        return std::make_unique<TSMuxer>(owner);
+    }
 };
 
 #endif
