@@ -27,6 +27,14 @@
 #define setTabStopDistance setTabStopWidth
 #endif
 
+// On macOS with Qt 6, native file dialogs can fail silently in some cases.
+// Use Qt's built-in dialogs as a workaround.
+#if defined(Q_OS_MACOS) && QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+static constexpr auto kFileDialogOptions = QFileDialog::DontUseNativeDialog;
+#else
+static constexpr auto kFileDialogOptions = QFileDialog::Options();
+#endif
+
 // Qt5/Qt6 compatibility helpers for deprecated QString methods
 namespace QtCompat {
 inline QString strLeft(const QString &str, qsizetype n)
@@ -88,37 +96,22 @@ QString makeFileFilter(const FileFilterVec &filters)
 
 QString fileDialogFilter()
 {
-    FileFilterVec filters = {{TsMuxerWindow::tr("AC3/E-AC3"), {"ac3", "ddp", "ec3", "eac3"}},
-                             {TsMuxerWindow::tr("AAC (advanced audio coding)"), {"aac"}},
-                             {TsMuxerWindow::tr("AVC/MVC/H.264 elementary stream"), {"avc", "mvc", "264", "h264"}},
-                             {TsMuxerWindow::tr("HEVC (High Efficiency Video Codec)"), {"hevc", "265", "h265"}},
-                             {TsMuxerWindow::tr("Digital Theater System"), {"dts"}},
-                             {TsMuxerWindow::tr("DTS-HD Master Audio"), {"dtshd", "dtsma"}},
-                             {TsMuxerWindow::tr("TrueHD/AC3+TrueHD"), {"thd", "truehd", "ac3+thd", "thd+ac3"}},
-                             {TsMuxerWindow::tr("Mpeg video elementary stream"), {"mpv", "m1v", "m2v"}},
-                             {TsMuxerWindow::tr("Mpeg audio elementary stream"), {"mpa"}},
-                             {TsMuxerWindow::tr("Transport Stream"), {"ts"}},
-                             {TsMuxerWindow::tr("BDAV Transport Stream"), {"m2ts", "mts", "ssif"}},
-                             {TsMuxerWindow::tr("Program Stream"), {"mpg", "mpeg", "vob", "evo"}},
-                             {TsMuxerWindow::tr("Matroska audio/video files"), {"mkv", "mka", "mks"}},
-                             {TsMuxerWindow::tr("MP4 audio/video files"), {"mp4", "m4a", "m4v"}},
-                             {TsMuxerWindow::tr("QuickTime audio/video files"), {"mov"}},
-                             {TsMuxerWindow::tr("Blu-ray play list"), {"mpls", "mpl"}},
-                             {TsMuxerWindow::tr("Blu-ray PGS subtitles"), {"sup"}},
-                             {TsMuxerWindow::tr("Text subtitles"), {"srt"}},
-                             {TsMuxerWindow::tr("WAVE - Uncompressed PCM audio"), {"wav", "w64"}},
-                             {TsMuxerWindow::tr("RAW LPCM Stream"), {"pcm"}}};
-    std::unordered_set<std::string> uniqueExts;
-    for (auto &f : filters)
-    {
-        uniqueExts.insert(std::begin(f.second), std::end(f.second));
-    }
-    std::vector<const char *> allSupportedExts;
-    for (auto &s : uniqueExts)
-    {
-        allSupportedExts.push_back(s.c_str());
-    }
-    filters.insert(std::begin(filters), {TsMuxerWindow::tr("All supported media files"), allSupportedExts});
+    // Consolidated filters to keep the dialog manageable on all platforms
+    FileFilterVec filters = {
+        {TsMuxerWindow::tr("All supported media files"),
+         {"ac3", "ddp", "ec3", "eac3", "aac", "avc", "mvc", "264", "h264", "hevc", "265", "h265", "dts", "dtshd",
+          "dtsma", "thd", "truehd", "ac3+thd", "thd+ac3", "mpv", "m1v", "m2v", "mpa", "ts", "m2ts", "mts", "ssif",
+          "mpg", "mpeg", "vob", "evo", "mkv", "mka", "mks", "mp4", "m4a", "m4v", "mov", "mpls", "mpl", "sup", "srt",
+          "wav", "w64", "pcm"}},
+        {TsMuxerWindow::tr("Container files (TS, MKV, MP4, MOV, etc.)"),
+         {"ts", "m2ts", "mts", "ssif", "mpg", "mpeg", "vob", "evo", "mkv", "mka", "mks", "mp4", "m4a", "m4v", "mov"}},
+        {TsMuxerWindow::tr("Video elementary streams"),
+         {"avc", "mvc", "264", "h264", "hevc", "265", "h265", "mpv", "m1v", "m2v"}},
+        {TsMuxerWindow::tr("Audio files"),
+         {"ac3", "ddp", "ec3", "eac3", "aac", "dts", "dtshd", "dtsma", "thd", "truehd", "ac3+thd", "thd+ac3", "mpa",
+          "wav", "w64", "pcm"}},
+        {TsMuxerWindow::tr("Subtitle files"), {"sup", "srt"}},
+        {TsMuxerWindow::tr("Blu-ray playlist"), {"mpls", "mpl"}}};
     return makeFileFilter(filters);
 }
 
@@ -433,25 +426,25 @@ TsMuxerWindow::TsMuxerWindow()
     connect(ui->removeTrackBtn, &QPushButton::clicked, this, &TsMuxerWindow::onRemoveTrackButtonClick);
     connect(ui->moveupBtn, &QPushButton::clicked, this, &TsMuxerWindow::onMoveUpButtonCLick);
     connect(ui->movedownBtn, &QPushButton::clicked, this, &TsMuxerWindow::onMoveDownButtonCLick);
-    connect(ui->checkFPS, &QCheckBox::stateChanged, this, &TsMuxerWindow::onVideoCheckBoxChanged);
-    connect(ui->checkBoxLevel, &QCheckBox::stateChanged, this, &TsMuxerWindow::onVideoCheckBoxChanged);
+    connect(ui->checkFPS, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onVideoCheckBoxChanged);
+    connect(ui->checkBoxLevel, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onVideoCheckBoxChanged);
     connect(ui->comboBoxSEI, comboBoxIndexChanged, this, &TsMuxerWindow::onVideoCheckBoxChanged);
-    connect(ui->checkBoxSecondaryVideo, &QCheckBox::stateChanged, this, &TsMuxerWindow::onVideoCheckBoxChanged);
-    connect(ui->checkBoxSPS, &QCheckBox::stateChanged, this, &TsMuxerWindow::onVideoCheckBoxChanged);
-    connect(ui->checkBoxRemovePulldown, &QCheckBox::stateChanged, this, &TsMuxerWindow::onPulldownCheckBoxChanged);
+    connect(ui->checkBoxSecondaryVideo, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onVideoCheckBoxChanged);
+    connect(ui->checkBoxSPS, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onVideoCheckBoxChanged);
+    connect(ui->checkBoxRemovePulldown, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onPulldownCheckBoxChanged);
     connect(ui->comboBoxFPS, comboBoxIndexChanged, this, &TsMuxerWindow::onVideoComboBoxChanged);
     connect(ui->comboBoxLevel, comboBoxIndexChanged, this, &TsMuxerWindow::onVideoComboBoxChanged);
     connect(ui->comboBoxAR, comboBoxIndexChanged, this, &TsMuxerWindow::onVideoComboBoxChanged);
-    connect(ui->checkBoxKeepFps, &QCheckBox::stateChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
-    connect(ui->dtsDwnConvert, &QCheckBox::stateChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
-    connect(ui->secondaryCheckBox, &QCheckBox::stateChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
+    connect(ui->checkBoxKeepFps, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
+    connect(ui->dtsDwnConvert, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
+    connect(ui->secondaryCheckBox, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
     connect(ui->langComboBox, comboBoxIndexChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
     connect(ui->offsetsComboBox, comboBoxIndexChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
     connect(ui->comboBoxPipCorner, comboBoxIndexChanged, this, &TsMuxerWindow::onSavedParamChanged);
     connect(ui->comboBoxPipSize, comboBoxIndexChanged, this, &TsMuxerWindow::onSavedParamChanged);
     connect(ui->spinBoxPipOffsetH, spinBoxValueChanged, this, &TsMuxerWindow::onSavedParamChanged);
     connect(ui->spinBoxPipOffsetV, spinBoxValueChanged, this, &TsMuxerWindow::onSavedParamChanged);
-    connect(ui->checkBoxSound, &QCheckBox::stateChanged, this, &TsMuxerWindow::onSavedParamChanged);
+    connect(ui->checkBoxSound, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onSavedParamChanged);
     connect(ui->editDelay, spinBoxValueChanged, this, &TsMuxerWindow::onEditDelayChanged);
     connect(ui->muxTimeEdit, &QTimeEdit::timeChanged, this, &TsMuxerWindow::updateMuxTime1);
     connect(ui->muxTimeClock, spinBoxValueChanged, this, &TsMuxerWindow::updateMuxTime2);
@@ -461,10 +454,10 @@ TsMuxerWindow::TsMuxerWindow()
     connect(ui->spinBoxMplsNum, spinBoxValueChanged, this, &TsMuxerWindow::onGeneralCheckboxClicked);
     connect(ui->spinBoxM2tsNum, spinBoxValueChanged, this, &TsMuxerWindow::onGeneralCheckboxClicked);
     connect(ui->checkBoxBlankPL, &QPushButton::clicked, this, &TsMuxerWindow::onSavedParamChanged);
-    connect(ui->checkBoxV3, &QCheckBox::stateChanged, this, &TsMuxerWindow::updateMetaLines);
+    connect(ui->checkBoxV3, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::updateMetaLines);
     connect(ui->BlackplaylistCombo, spinBoxValueChanged, this, &TsMuxerWindow::onSavedParamChanged);
     connect(ui->checkBoxNewAudioPes, &QAbstractButton::clicked, this, &TsMuxerWindow::onSavedParamChanged);
-    connect(ui->checkBoxCrop, &QCheckBox::stateChanged, this, &TsMuxerWindow::onSavedParamChanged);
+    connect(ui->checkBoxCrop, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onSavedParamChanged);
     connect(ui->checkBoxRVBR, &QAbstractButton::clicked, this, &TsMuxerWindow::onGeneralCheckboxClicked);
     connect(ui->checkBoxCBR, &QAbstractButton::clicked, this, &TsMuxerWindow::onGeneralCheckboxClicked);
     connect(ui->radioButtonStoreOutput, &QAbstractButton::clicked, this, &TsMuxerWindow::onSavedParamChanged);
@@ -473,7 +466,7 @@ TsMuxerWindow::TsMuxerWindow()
     connect(ui->editMaxBitrate, doubleSpinBoxValueChanged, this, &TsMuxerWindow::onGeneralSpinboxValueChanged);
     connect(ui->editMinBitrate, doubleSpinBoxValueChanged, this, &TsMuxerWindow::onGeneralSpinboxValueChanged);
     connect(ui->editCBRBitrate, doubleSpinBoxValueChanged, this, &TsMuxerWindow::onGeneralSpinboxValueChanged);
-    connect(ui->rightEyeCheckBox, &QCheckBox::stateChanged, this, &TsMuxerWindow::updateMetaLines);
+    connect(ui->rightEyeCheckBox, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::updateMetaLines);
     connect(ui->radioButtonAutoChapter, &QAbstractButton::clicked, this, &TsMuxerWindow::onChapterParamsChanged);
     connect(ui->radioButtonNoChapters, &QAbstractButton::clicked, this, &TsMuxerWindow::onChapterParamsChanged);
     connect(ui->radioButtonCustomChapters, &QAbstractButton::clicked, this, &TsMuxerWindow::onChapterParamsChanged);
@@ -485,7 +478,7 @@ TsMuxerWindow::TsMuxerWindow()
     connect(ui->spinEditSplitDuration, spinBoxValueChanged, this, &TsMuxerWindow::onSplitCutParamsChanged);
     connect(ui->editSplitSize, doubleSpinBoxValueChanged, this, &TsMuxerWindow::onSplitCutParamsChanged);
     connect(ui->comboBoxMeasure, comboBoxIndexChanged, this, &TsMuxerWindow::onSplitCutParamsChanged);
-    connect(ui->checkBoxCut, &QCheckBox::stateChanged, this, &TsMuxerWindow::onSplitCutParamsChanged);
+    connect(ui->checkBoxCut, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onSplitCutParamsChanged);
     connect(ui->cutStartTimeEdit, &QTimeEdit::timeChanged, this, &TsMuxerWindow::onSplitCutParamsChanged);
     connect(ui->cutEndTimeEdit, &QTimeEdit::timeChanged, this, &TsMuxerWindow::onSplitCutParamsChanged);
     connect(ui->spinEditBorder, spinBoxValueChanged, this, &TsMuxerWindow::onSavedParamChanged);
@@ -506,9 +499,9 @@ TsMuxerWindow::TsMuxerWindow()
     connect(ui->radioButtonOutoutInInput, &QAbstractButton::clicked, this, &TsMuxerWindow::onSavedParamChanged);
     connect(ui->defaultAudioTrackComboBox, comboBoxIndexChanged, this, &TsMuxerWindow::updateMetaLines);
     connect(ui->defaultSubTrackComboBox, comboBoxIndexChanged, this, &TsMuxerWindow::updateMetaLines);
-    connect(ui->defaultAudioTrackCheckBox, &QCheckBox::stateChanged, this, &TsMuxerWindow::updateMetaLines);
-    connect(ui->defaultSubTrackCheckBox, &QCheckBox::stateChanged, this, &TsMuxerWindow::updateMetaLines);
-    connect(ui->defaultSubTrackForcedOnlyCheckBox, &QCheckBox::stateChanged, this, &TsMuxerWindow::updateMetaLines);
+    connect(ui->defaultAudioTrackCheckBox, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::updateMetaLines);
+    connect(ui->defaultSubTrackCheckBox, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::updateMetaLines);
+    connect(ui->defaultSubTrackForcedOnlyCheckBox, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::updateMetaLines);
     connect(ui->pipTransparencySpinBox, spinBoxValueChanged, this, &TsMuxerWindow::updateMetaLines);
 
     connect(&proc, &QProcess::readyReadStandardOutput, this, &TsMuxerWindow::readFromStdout);
@@ -740,9 +733,8 @@ void TsMuxerWindow::onVideoComboBoxChanged(int)
     updateMetaLines();
 }
 
-void TsMuxerWindow::onVideoCheckBoxChanged(int state)
+void TsMuxerWindow::onVideoCheckBoxChanged()
 {
-    Q_UNUSED(state);
     if (disableUpdatesCnt)
         return;
     QtvCodecInfo *codecInfo = getCurrentCodec();
@@ -941,9 +933,8 @@ void TsMuxerWindow::onEditDelayChanged(int)
     updateMetaLines();
 }
 
-void TsMuxerWindow::onPulldownCheckBoxChanged(int state)
+void TsMuxerWindow::onPulldownCheckBoxChanged()
 {
-    Q_UNUSED(state);
     if (disableUpdatesCnt)
         return;
     QtvCodecInfo *codecInfo = getCurrentCodec();
@@ -1932,8 +1923,8 @@ void TsMuxerWindow::updateMuxTime2()
 void TsMuxerWindow::onLanguageComboBoxIndexChanged(int idx)
 {
     auto lang = ui->languageSelectComboBox->itemData(idx).toString();
-    qtCoreTranslator.load(QString("qtbase_%1").arg(lang), QLibraryInfo::location(QLibraryInfo::TranslationsPath));
-    tsMuxerTranslator.load(QString("tsmuxergui_%1").arg(lang), ":/i18n");
+    (void)qtCoreTranslator.load(QString("qtbase_%1").arg(lang), QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+    (void)tsMuxerTranslator.load(QString("tsmuxergui_%1").arg(lang), ":/i18n");
     QFile aboutContent(QString(":/about_%1.html").arg(lang));
     if (aboutContent.open(QIODevice::ReadOnly))
     {
@@ -2426,7 +2417,8 @@ void TsMuxerWindow::saveFileDialog()
 {
     if (ui->radioButtonDemux->isChecked() || ui->radioButtonBluRay->isChecked() || ui->radioButtonAVCHD->isChecked())
     {
-        QString folder = QDir::toNativeSeparators(QFileDialog::getExistingDirectory(this, getOutputDir()));
+        QString folder = QDir::toNativeSeparators(QFileDialog::getExistingDirectory(
+            this, tr("Select output folder"), getOutputDir(), QFileDialog::ShowDirsOnly | kFileDialogOptions));
         if (!folder.isEmpty())
         {
             ui->outFileName->setText(folder + QDir::separator());
@@ -2439,8 +2431,8 @@ void TsMuxerWindow::saveFileDialog()
     {
         auto fileName = unquoteStr(ui->outFileName->text());
         auto path = fileName.isEmpty() ? getOutputDir() : QFileInfo(fileName).absoluteFilePath();
-        fileName = QDir::toNativeSeparators(
-            QFileDialog::getSaveFileName(this, tr("Select file for muxing"), path, mSaveDialogFilter));
+        fileName = QDir::toNativeSeparators(QFileDialog::getSaveFileName(
+            this, tr("Select file for muxing"), path, mSaveDialogFilter, nullptr, kFileDialogOptions));
         if (!fileName.isEmpty())
         {
             ui->outFileName->setText(fileName);
@@ -2526,8 +2518,9 @@ void TsMuxerWindow::startMuxing()
 
 void TsMuxerWindow::saveMetaFileBtnClick()
 {
-    QString metaName = QFileDialog::getSaveFileName(this, "", changeFileExt(ui->outFileName->text(), "meta"),
-                                                    tr("tsMuxeR project file (*.meta);;All files (*.*)"));
+    QString metaName = QFileDialog::getSaveFileName(
+        this, tr("Save project file"), changeFileExt(ui->outFileName->text(), "meta"),
+        tr("tsMuxeR project file (*.meta);;All files (*.*)"), nullptr, kFileDialogOptions);
     if (metaName.isEmpty())
         return;
     QFileInfo fi(metaName);
@@ -2586,7 +2579,7 @@ void TsMuxerWindow::dragEnterEvent(QDragEnterEvent *event)
             opacityTimer.stop();
             setWindowOpacity(0.9);
             event->acceptProposedAction();
-            QWidget *w = childAt(event->pos());
+            QWidget *w = childAt(event->position().toPoint());
             updateBtns(w);
         }
     }
@@ -2612,7 +2605,7 @@ void TsMuxerWindow::dropEvent(QDropEvent *event)
     }
     if (addFileList.isEmpty())
         return;
-    auto w = childAt(event->pos());
+    auto w = childAt(event->position().toPoint());
     if (w && w == ui->btnAppend && w->isEnabled())
         appendFile();
     else if (ui->addBtn->isEnabled())
@@ -2622,7 +2615,7 @@ void TsMuxerWindow::dropEvent(QDropEvent *event)
 void TsMuxerWindow::dragMoveEvent(QDragMoveEvent *event)
 {
     event->acceptProposedAction();
-    QWidget *w = childAt(event->pos());
+    QWidget *w = childAt(event->position().toPoint());
     updateBtns(w);
 }
 
@@ -2862,7 +2855,8 @@ void TsMuxerWindow::processAddFileList(OnCodecListReadyFn onCodecListReady, Post
 template <typename F>
 void TsMuxerWindow::showAddFilesDialog(QString &&windowTitle, F &&windowOkFn)
 {
-    const auto files = QFileDialog::getOpenFileNames(this, windowTitle, lastInputDir, fileDialogFilter());
+    const auto files =
+        QFileDialog::getOpenFileNames(this, windowTitle, lastInputDir, fileDialogFilter(), nullptr, kFileDialogOptions);
     if (files.isEmpty())
         return;
     lastInputDir = QDir::toNativeSeparators(files.back());

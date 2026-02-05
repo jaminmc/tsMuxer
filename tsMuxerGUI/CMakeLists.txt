@@ -64,6 +64,13 @@ elseif (APPLE)
   set_source_files_properties(tsMuxerGUI.icns PROPERTIES
          MACOSX_PACKAGE_LOCATION "Resources")
   add_executable(tsMuxerGUI MACOSX_BUNDLE ${tsmuxer_gui_sources} tsMuxerGUI.icns)
+  # Copy the tsMuxeR CLI binary into the app bundle after building
+  add_custom_command(TARGET tsMuxerGUI POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "$<TARGET_FILE:tsmuxer>"
+      "$<TARGET_BUNDLE_CONTENT_DIR:tsMuxerGUI>/MacOS/tsMuxeR"
+    COMMENT "Copying tsMuxeR CLI into app bundle"
+  )
 # UNIX must be last here, as it's going to be true for APPLE and CYGWIN as well,
 # but we want those to be handled by the code above.
 elseif (UNIX)
@@ -76,3 +83,8 @@ elseif (UNIX)
 endif()
 
 target_link_libraries(tsMuxerGUI ${tsmuxer_gui_libs})
+
+# On macOS, ensure tsMuxeR CLI is built before the GUI (for the copy step)
+if (APPLE)
+  add_dependencies(tsMuxerGUI tsmuxer)
+endif()

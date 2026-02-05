@@ -62,8 +62,8 @@ class TsMuxerWindow : public QWidget
     void trackLVItemSelectionChanged();
     void inputFilesLVChanged();
     void trackLVItemChanged(QTableWidgetItem* item);
-    void onVideoCheckBoxChanged(int state);
-    void onPulldownCheckBoxChanged(int state);
+    void onVideoCheckBoxChanged();
+    void onPulldownCheckBoxChanged();
     void onVideoComboBoxChanged(int index);
     void onAudioSubtitlesParamsChanged();
     void onEditDelayChanged(int i);
