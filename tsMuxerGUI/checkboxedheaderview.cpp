@@ -2,7 +2,7 @@
 
 #include <QPainter>
 
-QnCheckBoxedHeaderView::QnCheckBoxedHeaderView(QWidget *parent)
+QnCheckBoxedHeaderView::QnCheckBoxedHeaderView(QWidget* parent)
     : base_type(Qt::Horizontal, parent), m_checkState(Qt::Unchecked), m_checkColumnIndex(0)
 {
     connect(this, &QnCheckBoxedHeaderView::sectionClicked, this, &QnCheckBoxedHeaderView::at_sectionClicked);
@@ -18,7 +18,7 @@ void QnCheckBoxedHeaderView::setCheckState(Qt::CheckState state)
     viewport()->update();
 }
 
-void QnCheckBoxedHeaderView::paintSection(QPainter *painter, const QRect &rect, int logicalIndex) const
+void QnCheckBoxedHeaderView::paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const
 {
     painter->save();
     base_type::paintSection(painter, rect, logicalIndex);

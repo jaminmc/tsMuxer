@@ -187,7 +187,7 @@ int MatroskaDemuxer::matroska_parse_index()
     return res;
 }
 
-MatroskaDemuxer::MatroskaDemuxer(const BufferedReaderManager &readManager)
+MatroskaDemuxer::MatroskaDemuxer(const BufferedReaderManager& readManager)
     : IOContextDemuxer(readManager), levels(), m_title(), created(0), fileDuration(0)
 {
     m_lastDeliveryPacket = nullptr;
@@ -205,7 +205,7 @@ MatroskaDemuxer::MatroskaDemuxer(const BufferedReaderManager &readManager)
     muxing_app = nullptr;
 }
 
-int MatroskaDemuxer::ebml_read_ascii(uint32_t *id, char **str)
+int MatroskaDemuxer::ebml_read_ascii(uint32_t* id, char** str)
 {
     int res;
     int64_t rlength;
@@ -221,7 +221,7 @@ int MatroskaDemuxer::ebml_read_ascii(uint32_t *id, char **str)
     {
         THROW(ERR_MATROSKA_PARSE, "Memory allocation failed")
     }
-    if (static_cast<int32_t>(get_buffer(reinterpret_cast<uint8_t *>(*str), size)) != size)
+    if (static_cast<int32_t>(get_buffer(reinterpret_cast<uint8_t*>(*str), size)) != size)
     {
         const offset_t pos = m_processedBytes;
         THROW(ERR_MATROSKA_PARSE, "Read error at pos. " << pos)
@@ -230,7 +230,7 @@ int MatroskaDemuxer::ebml_read_ascii(uint32_t *id, char **str)
     return 0;
 }
 
-int MatroskaDemuxer::ebml_read_header(char **doctype, int *version)
+int MatroskaDemuxer::ebml_read_header(char** doctype, int* version)
 {
     uint32_t id;
     int levelUp, res = 0;
@@ -302,7 +302,7 @@ int MatroskaDemuxer::ebml_read_header(char **doctype, int *version)
 
         case EBML_ID_DOCTYPE:
         {
-            char *text;
+            char* text;
 
             if ((res = ebml_read_ascii(&id, &text)) < 0)
                 return res;
@@ -339,9 +339,9 @@ int MatroskaDemuxer::ebml_read_header(char **doctype, int *version)
     return 0;
 }
 
-void MatroskaDemuxer::matroska_queue_packet(AVPacket *pkt) { packets.push(pkt); }
+void MatroskaDemuxer::matroska_queue_packet(AVPacket* pkt) { packets.push(pkt); }
 
-int MatroskaDemuxer::rv_offset(const uint8_t *data, const int slice, const int slices)
+int MatroskaDemuxer::rv_offset(const uint8_t* data, const int slice, const int slices)
 {
     const int offset = 8 * slice + 4;
     return AV_RL32(data + offset) + 8 * slices;
@@ -360,7 +360,7 @@ int MatroskaDemuxer::matroska_find_track_by_num(const int64_t num) const
     return -1;
 }
 
-int MatroskaDemuxer::matroska_ebmlnum_uint(const uint8_t *data, const int32_t size, uint64_t *num)
+int MatroskaDemuxer::matroska_ebmlnum_uint(const uint8_t* data, const int32_t size, uint64_t* num)
 {
     int read = 1, n = 1, num_ffs = 0;
     uint64_t len_mask = 0x80;
@@ -397,7 +397,7 @@ int MatroskaDemuxer::matroska_ebmlnum_uint(const uint8_t *data, const int32_t si
     return read;
 }
 
-int MatroskaDemuxer::matroska_ebmlnum_sint(const uint8_t *data, const int32_t size, int64_t *num)
+int MatroskaDemuxer::matroska_ebmlnum_sint(const uint8_t* data, const int32_t size, int64_t* num)
 {
     uint64_t unum;
     int res;
@@ -415,7 +415,7 @@ int MatroskaDemuxer::matroska_ebmlnum_sint(const uint8_t *data, const int32_t si
     return res;
 }
 
-int MatroskaDemuxer::matroska_deliver_packet(AVPacket *&avPacket)
+int MatroskaDemuxer::matroska_deliver_packet(AVPacket*& avPacket)
 {
     if (!packets.empty())
     {
@@ -427,7 +427,7 @@ int MatroskaDemuxer::matroska_deliver_packet(AVPacket *&avPacket)
     return -1;
 }
 
-int MatroskaDemuxer::ebml_read_sint(uint32_t *id, int64_t *num)
+int MatroskaDemuxer::ebml_read_sint(uint32_t* id, int64_t* num)
 {
     unsigned n = 1;
     int negative = 0, res;
@@ -454,7 +454,7 @@ int MatroskaDemuxer::ebml_read_sint(uint32_t *id, int64_t *num)
     return 0;
 }
 
-void MatroskaDemuxer::decompressData(uint8_t *data, const int size)
+void MatroskaDemuxer::decompressData(uint8_t* data, const int size)
 {
     z_stream zstream = {};
 
@@ -481,13 +481,13 @@ void MatroskaDemuxer::decompressData(uint8_t *data, const int size)
         m_tmpBuffer.clear();
 }
 
-int MatroskaDemuxer::matroska_parse_block(uint8_t *data, int size, const int64_t pos, const int64_t cluster_time,
+int MatroskaDemuxer::matroska_parse_block(uint8_t* data, int size, const int64_t pos, const int64_t cluster_time,
                                           const int64_t duration, int is_keyframe, int is_bframe)
 {
     int res = 0;
     // AVStream *st;
-    const uint8_t *origdata = data;
-    int *lace_size = nullptr;
+    const uint8_t* origdata = data;
+    int* lace_size = nullptr;
     int n, laces = 0;
     uint64_t num;
 
@@ -524,7 +524,7 @@ int MatroskaDemuxer::matroska_parse_block(uint8_t *data, int size, const int64_t
     {
     case 0x0: /* no lacing */
         laces = 1;
-        lace_size = reinterpret_cast<int32_t *>(new uint8_t[sizeof(int)]);
+        lace_size = reinterpret_cast<int32_t*>(new uint8_t[sizeof(int)]);
         lace_size[0] = size;
         break;
 
@@ -542,7 +542,7 @@ int MatroskaDemuxer::matroska_parse_block(uint8_t *data, int size, const int64_t
         laces = (*data) + 1;
         data += 1;
         size -= 1;
-        lace_size = reinterpret_cast<int32_t *>(new uint8_t[laces * sizeof(int)]);
+        lace_size = reinterpret_cast<int32_t*>(new uint8_t[laces * sizeof(int)]);
         memset(lace_size, 0, static_cast<size_t>(laces) * sizeof(int));
 
         switch ((flags & 0x06) >> 1)
@@ -666,7 +666,7 @@ int MatroskaDemuxer::matroska_parse_block(uint8_t *data, int size, const int64_t
                 else
                     slice_size = rv_offset(data, slice + 1, slices) - slice_offset;
 
-                auto *pkt = new AVPacket();
+                auto* pkt = new AVPacket();
                 pkt->data = nullptr;
                 pkt->size = 0;
                 pkt->pts = timecode * INTERNAL_PTS_FREQ / 1000;
@@ -676,7 +676,7 @@ int MatroskaDemuxer::matroska_parse_block(uint8_t *data, int size, const int64_t
                 pkt->stream_index = track + 1;  // tracks[track]->stream_index;
 
                 int offset = 0;
-                uint8_t *curPtr = data + slice_offset;
+                uint8_t* curPtr = data + slice_offset;
                 int curPtr_size = size - slice_offset;
                 m_tmpBuffer.clear();
                 if (tracks[track]->encodingAlgo == COMPRESSION_STRIP_HEADERS)
@@ -747,7 +747,7 @@ int MatroskaDemuxer::matroska_parse_blockgroup(const int64_t cluster_time)
     int is_keyframe = PKT_FLAG_KEY;
     const size_t last_num_packets = packets.size();
     int64_t duration = AV_NOPTS_VALUE;
-    uint8_t *data = nullptr;
+    uint8_t* data = nullptr;
     int size = 0;
     int64_t pos = 0;
 
@@ -826,7 +826,7 @@ int MatroskaDemuxer::matroska_parse_blockgroup(const int64_t cluster_time)
 
 /* Read the next element as an unsigned int.
  * 0 is success, < 0 is failure. */
-int MatroskaDemuxer::ebml_read_uint(uint32_t *id, int64_t *num)
+int MatroskaDemuxer::ebml_read_uint(uint32_t* id, int64_t* num)
 {
     unsigned n = 0;
     int res;
@@ -848,7 +848,7 @@ int MatroskaDemuxer::ebml_read_uint(uint32_t *id, int64_t *num)
 
 /* Read: the element content data ID.
  * Return: the number of bytes read or < 0 on error. */
-int MatroskaDemuxer::ebml_read_element_id(uint32_t *id, int *levelUp)
+int MatroskaDemuxer::ebml_read_element_id(uint32_t* id, int* levelUp)
 {
     int read;
     int64_t total;
@@ -891,7 +891,7 @@ int MatroskaDemuxer::ebml_read_skip()
 /* Read the next element, but only the header. The contents
  * are supposed to be sub-elements which can be read separately.
  * 0 is success, < 0 is failure. */
-int MatroskaDemuxer::ebml_read_master(uint32_t *id)
+int MatroskaDemuxer::ebml_read_master(uint32_t* id)
 {
     int64_t length;
     int res;
@@ -906,7 +906,7 @@ int MatroskaDemuxer::ebml_read_master(uint32_t *id)
     }
 
     /* remember level */
-    MatroskaLevel *level = &levels[num_levels++];
+    MatroskaLevel* level = &levels[num_levels++];
     level->start = m_processedBytes;
     level->length = length;
     return 0;
@@ -915,7 +915,7 @@ int MatroskaDemuxer::ebml_read_master(uint32_t *id)
 /* Read: element content length.
  * Return: the number of bytes read or < 0 on error. */
 
-int MatroskaDemuxer::ebml_read_element_length(int64_t *length)
+int MatroskaDemuxer::ebml_read_element_length(int64_t* length)
 {
     /* clear cache since we're now beyond that data point */
     peek_id = 0;
@@ -924,7 +924,7 @@ int MatroskaDemuxer::ebml_read_element_length(int64_t *length)
     return ebml_read_num(8, length);
 }
 
-int MatroskaDemuxer::ebml_read_binary(uint32_t *id, uint8_t **binary, int *size)
+int MatroskaDemuxer::ebml_read_binary(uint32_t* id, uint8_t** binary, int* size)
 {
     int64_t rlength;
     int res;
@@ -951,7 +951,7 @@ int MatroskaDemuxer::matroska_parse_cluster()
     int res = 0;
     uint32_t id;
     int64_t cluster_time = 0;
-    uint8_t *data;
+    uint8_t* data;
     int64_t pos;
     int size;
 
@@ -1024,7 +1024,7 @@ int MatroskaDemuxer::ebml_read_element_level_up()
 
     while (num_levels > 0)
     {
-        const MatroskaLevel *level = &levels[num_levels - 1];
+        const MatroskaLevel* level = &levels[num_levels - 1];
 
         if (m_processedBytes >= level->start + level->length)
         {
@@ -1040,7 +1040,7 @@ int MatroskaDemuxer::ebml_read_element_level_up()
     return num;
 }
 
-void MatroskaDemuxer::openFile(const std::string &streamName)
+void MatroskaDemuxer::openFile(const std::string& streamName)
 {
     readClose();
     if (!m_bufferedReader->openStream(m_readerID, streamName.c_str()))
@@ -1073,17 +1073,17 @@ void MatroskaDemuxer::readClose()
     delete[] muxing_app;
     while (!packets.empty())
     {
-        const AVPacket *pkt = packets.front();
+        const AVPacket* pkt = packets.front();
         delete[] pkt->data;
         delete pkt;
         packets.pop();
     }
-    for (int i = 0; i < num_tracks; i++) delete[] reinterpret_cast<char *>(tracks[i]);
+    for (int i = 0; i < num_tracks; i++) delete[] reinterpret_cast<char*>(tracks[i]);
 }
 
 // --------------------------- refactored from ffmpeg matroska decoder -----------------------
 
-int MatroskaDemuxer::ebml_read_num(const int max_size, int64_t *number)
+int MatroskaDemuxer::ebml_read_num(const int max_size, int64_t* number)
 {
     // ByteIOContext *pb = &matroska->ctx->pb;
     int len_mask = 0x80, read = 1, n = 1;
@@ -1120,13 +1120,13 @@ int MatroskaDemuxer::ebml_read_num(const int max_size, int64_t *number)
     return read;
 }
 
-uint32_t MatroskaDemuxer::ebml_peek_id(int *levelUp)
+uint32_t MatroskaDemuxer::ebml_peek_id(int* levelUp)
 {
     uint32_t id;
     return ebml_read_element_id(&id, levelUp) < 0 ? 0 : id;
 }
 
-int MatroskaDemuxer::readPacket(AVPacket &avPacket)
+int MatroskaDemuxer::readPacket(AVPacket& avPacket)
 {
     uint32_t id;
     if (m_lastDeliveryPacket)
@@ -1137,7 +1137,7 @@ int MatroskaDemuxer::readPacket(AVPacket &avPacket)
     }
 
     // Read stream until we have a packet queued.
-    AVPacket *newPacket = nullptr;
+    AVPacket* newPacket = nullptr;
     while (matroska_deliver_packet(newPacket) != 0)
     {
         // Have we already reached the end?
@@ -1194,11 +1194,11 @@ int MatroskaDemuxer::readPacket(AVPacket &avPacket)
 
 int MatroskaDemuxer::matroska_read_header()
 {
-    for (int i = 0; i < num_tracks; i++) delete[] reinterpret_cast<char *>(tracks[i]);
+    for (int i = 0; i < num_tracks; i++) delete[] reinterpret_cast<char*>(tracks[i]);
     num_tracks = 0;
 
     // MatroskaDemuxContext *matroska = s->priv_data;
-    char *doctype = nullptr;
+    char* doctype = nullptr;
     int version, last_level, res;
     uint32_t id;
 
@@ -1340,7 +1340,7 @@ int MatroskaDemuxer::matroska_read_header()
     {
         for (int i = 0; i < num_tracks; i++)
         {
-            MatroskaTrack *track = tracks[i];
+            MatroskaTrack* track = tracks[i];
             track->stream_index = -1;
             if (track->codec_id == nullptr)
                 continue;
@@ -1437,7 +1437,7 @@ int MatroskaDemuxer::matroska_parse_info()
 
         case MATROSKA_ID_TITLE:
         {
-            char *text;
+            char* text;
             if ((res = ebml_read_utf8(&id, &text)) < 0)
                 break;
             strncpy(m_title, text, sizeof(m_title) - 1);
@@ -1447,7 +1447,7 @@ int MatroskaDemuxer::matroska_parse_info()
 
         case MATROSKA_ID_WRITINGAPP:
         {
-            char *text;
+            char* text;
             if ((res = ebml_read_utf8(&id, &text)) < 0)
                 break;
             writing_app = text;
@@ -1456,7 +1456,7 @@ int MatroskaDemuxer::matroska_parse_info()
 
         case MATROSKA_ID_MUXINGAPP:
         {
-            char *text;
+            char* text;
             if ((res = ebml_read_utf8(&id, &text)) < 0)
                 break;
             muxing_app = text;
@@ -1493,11 +1493,11 @@ int MatroskaDemuxer::matroska_parse_info()
 
 /* Read the next element as a date (nanoseconds since 1/1/2000).
  * 0 is success, < 0 is failure. */
-int MatroskaDemuxer::ebml_read_date(uint32_t *id, int64_t *date) { return ebml_read_sint(id, date); }
+int MatroskaDemuxer::ebml_read_date(uint32_t* id, int64_t* date) { return ebml_read_sint(id, date); }
 
 /* Read the next element as a float.
  * 0 is success, < 0 is failure. */
-int MatroskaDemuxer::ebml_read_float(uint32_t *id, double *num)
+int MatroskaDemuxer::ebml_read_float(uint32_t* id, double* num)
 {
     int res;
     int64_t size;
@@ -1523,7 +1523,7 @@ int MatroskaDemuxer::ebml_read_float(uint32_t *id, double *num)
 
 /* Read the next element as a UTF-8 string.
  * 0 is success, < 0 is failure. */
-int MatroskaDemuxer::ebml_read_utf8(uint32_t *id, char **str) { return ebml_read_ascii(id, str); }
+int MatroskaDemuxer::ebml_read_utf8(uint32_t* id, char** str) { return ebml_read_ascii(id, str); }
 
 int MatroskaDemuxer::matroska_parse_metadata()
 {
@@ -1598,7 +1598,7 @@ int MatroskaDemuxer::matroska_parse_chapters()
             int64_t end = AV_NOPTS_VALUE, start = AV_NOPTS_VALUE;
             int64_t uid = 0;
             bool uidFound = false;
-            char *title = nullptr;
+            char* title = nullptr;
             // if there is more than one chapter edition we take only the first one
             if (!chapters.empty())
             {
@@ -1804,7 +1804,7 @@ int MatroskaDemuxer::matroska_parse_tracks()
     return res;
 }
 
-int MatroskaDemuxer::readEncodingCompression(MatroskaTrack *track)
+int MatroskaDemuxer::readEncodingCompression(MatroskaTrack* track)
 {
     int res;
     uint32_t id;
@@ -1838,7 +1838,7 @@ int MatroskaDemuxer::readEncodingCompression(MatroskaTrack *track)
         }
         case MATROSKA_ID_ENCODINGCOMPSETTINGS:
         {
-            uint8_t *data;
+            uint8_t* data;
             int size;
             if ((res = ebml_read_binary(&id, &data, &size)) < 0)
                 break;
@@ -1862,7 +1862,7 @@ int MatroskaDemuxer::readEncodingCompression(MatroskaTrack *track)
     return 0;
 }
 
-int MatroskaDemuxer::readTrackEncoding(MatroskaTrack *track)
+int MatroskaDemuxer::readTrackEncoding(MatroskaTrack* track)
 {
     int res;
     uint32_t id;
@@ -1893,7 +1893,7 @@ int MatroskaDemuxer::readTrackEncoding(MatroskaTrack *track)
     return 0;
 }
 
-int MatroskaDemuxer::readTrackEncodings(MatroskaTrack *track)
+int MatroskaDemuxer::readTrackEncodings(MatroskaTrack* track)
 {
     int res;
     uint32_t id;
@@ -1933,14 +1933,14 @@ int MatroskaDemuxer::matroska_add_stream()
         THROW(ERR_COMMON, "Too many tracks. Max supported tracks count: " << MAX_STREAMS)
 
     /* Allocate a generic track. As soon as we know its type we'll realloc. */
-    auto *track = reinterpret_cast<MatroskaTrack *>(new char[MAX_TRACK_SIZE]{});
+    auto* track = reinterpret_cast<MatroskaTrack*>(new char[MAX_TRACK_SIZE]{});
     track->encodingAlgo = -1;
     strcpy(track->language, "eng");
 
     /* start with the master */
     if ((res = ebml_read_master(&id)) < 0)
     {
-        delete[] reinterpret_cast<char *>(track);
+        delete[] reinterpret_cast<char*>(track);
         return res;
     }
 
@@ -2013,7 +2013,7 @@ int MatroskaDemuxer::matroska_add_stream()
         /* tracktype specific stuff for video */
         case MATROSKA_ID_TRACKVIDEO:
         {
-            MatroskaVideoTrack *videotrack;
+            MatroskaVideoTrack* videotrack;
             if (track->type == IOContextTrackType::UNDEFINED)
                 track->type = IOContextTrackType::VIDEO;
             if (track->type != IOContextTrackType::VIDEO)
@@ -2024,7 +2024,7 @@ int MatroskaDemuxer::matroska_add_stream()
             }
             if ((res = ebml_read_master(&id)) < 0)
                 break;
-            videotrack = reinterpret_cast<MatroskaVideoTrack *>(track);
+            videotrack = reinterpret_cast<MatroskaVideoTrack*>(track);
 
             while (res == 0)
             {
@@ -2185,7 +2185,7 @@ int MatroskaDemuxer::matroska_add_stream()
         /* tracktype specific stuff for audio */
         case MATROSKA_ID_TRACKAUDIO:
         {
-            MatroskaAudioTrack *audiotrack;
+            MatroskaAudioTrack* audiotrack;
             if (track->type == IOContextTrackType::UNDEFINED)
                 track->type = IOContextTrackType::AUDIO;
             if (track->type != IOContextTrackType::AUDIO)
@@ -2196,7 +2196,7 @@ int MatroskaDemuxer::matroska_add_stream()
             }
             if ((res = ebml_read_master(&id)) < 0)
                 break;
-            audiotrack = reinterpret_cast<MatroskaAudioTrack *>(track);
+            audiotrack = reinterpret_cast<MatroskaAudioTrack*>(track);
             audiotrack->channels = 1;
             audiotrack->samplerate = 8000;
 
@@ -2273,7 +2273,7 @@ int MatroskaDemuxer::matroska_add_stream()
             /* codec identifier */
         case MATROSKA_ID_CODECID:
         {
-            char *text;
+            char* text;
             if ((res = ebml_read_ascii(&id, &text)) < 0)
                 break;
             track->codec_id = text;
@@ -2283,7 +2283,7 @@ int MatroskaDemuxer::matroska_add_stream()
             /* codec private data */
         case MATROSKA_ID_CODECPRIVATE:
         {
-            uint8_t *data;
+            uint8_t* data;
             int size;
             if ((res = ebml_read_binary(&id, &data, &size) < 0))
                 break;
@@ -2295,7 +2295,7 @@ int MatroskaDemuxer::matroska_add_stream()
             /* name of the codec */
         case MATROSKA_ID_CODECNAME:
         {
-            char *text;
+            char* text;
             if ((res = ebml_read_utf8(&id, &text)) < 0)
                 break;
             track->codec_name = text;
@@ -2305,7 +2305,7 @@ int MatroskaDemuxer::matroska_add_stream()
             /* name of this track */
         case MATROSKA_ID_TRACKNAME:
         {
-            char *text;
+            char* text;
             if ((res = ebml_read_utf8(&id, &text)) < 0)
                 break;
             track->name = text;
@@ -2405,7 +2405,7 @@ int MatroskaDemuxer::matroska_add_stream()
 
 // ------------- need to be implemented --------------
 
-int MatroskaDemuxer::simpleDemuxBlock(DemuxedData &demuxedData, const PIDSet &acceptedPIDs, int64_t &discardSize)
+int MatroskaDemuxer::simpleDemuxBlock(DemuxedData& demuxedData, const PIDSet& acceptedPIDs, int64_t& discardSize)
 {
     for (int acceptedPID : acceptedPIDs) demuxedData[acceptedPID];
 
@@ -2431,7 +2431,7 @@ int MatroskaDemuxer::simpleDemuxBlock(DemuxedData &demuxedData, const PIDSet &ac
         {
             if (acceptedPIDs.find(packet.stream_index) != acceptedPIDs.end())
             {
-                MemoryBlock &vect = demuxedData[packet.stream_index];
+                MemoryBlock& vect = demuxedData[packet.stream_index];
                 if (packet.size > 0)
                     vect.append(packet.data, packet.size);
                 demuxedSize += packet.size;
@@ -2443,12 +2443,12 @@ int MatroskaDemuxer::simpleDemuxBlock(DemuxedData &demuxedData, const PIDSet &ac
     return 0;
 }
 
-void MatroskaDemuxer::getTrackList(std::map<int32_t, TrackInfo> &trackList)
+void MatroskaDemuxer::getTrackList(std::map<int32_t, TrackInfo>& trackList)
 {
     for (int i = 0; i < num_tracks; i++) trackList[i + 1] = TrackInfo(getTrackType(tracks[i]), tracks[i]->language, 0);
 }
 
-int MatroskaDemuxer::getTrackType(const MatroskaTrack *track)
+int MatroskaDemuxer::getTrackType(const MatroskaTrack* track)
 {
     if (track->codec_id == nullptr)
         return 0;
@@ -2471,7 +2471,7 @@ std::vector<AVChapter> MatroskaDemuxer::getChapters()
 {
     std::vector<AVChapter> rez;
     rez.reserve(chapters.size());
-    for (const auto &[index, avChapter] : chapters) rez.push_back(avChapter);
+    for (const auto& [index, avChapter] : chapters) rez.push_back(avChapter);
     std::sort(rez.begin(), rez.end());
     return rez;
 }

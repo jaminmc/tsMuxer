@@ -9,14 +9,14 @@ class LangCodesModel : public QAbstractListModel
 {
     Q_OBJECT
    public:
-    LangCodesModel(QObject *parent = nullptr) : QAbstractListModel(parent) { onLanguageChanged(); }
+    LangCodesModel(QObject* parent = nullptr) : QAbstractListModel(parent) { onLanguageChanged(); }
 
     void onLanguageChanged();
 
    private:
     struct QtvLangCode
     {
-        const char *code;
+        const char* code;
         QString lang;
         QVariant toVariant(int role) const;
     };
@@ -34,9 +34,9 @@ class LangCodesModel : public QAbstractListModel
     static constexpr int ROW_COUNT = 2 /* und + "common" */ + std::tuple_size<decltype(m_shortLangList)>::value +
                                      1 /* "all" */ + std::tuple_size<decltype(m_fullLangList)>::value;
 
-    int rowCount(const QModelIndex &parent) const override;
-    QVariant data(const QModelIndex &index, int role) const override;
-    Qt::ItemFlags flags(const QModelIndex &index) const override;
+    int rowCount(const QModelIndex& parent) const override;
+    QVariant data(const QModelIndex& index, int role) const override;
+    Qt::ItemFlags flags(const QModelIndex& index) const override;
 };
 
 #endif

@@ -15,8 +15,7 @@ static constexpr int EXTENDED_SAR = 255;
 unsigned VvcUnit::extractUEGolombCode()
 {
     unsigned cnt = 0;
-    for (; !m_reader.getBit(); cnt++)
-        ;
+    for (; !m_reader.getBit(); cnt++);
     if (cnt > INT_BIT)
         THROW_BITSTREAM_ERR;
     return (1 << cnt) - 1 + m_reader.getBits(cnt);

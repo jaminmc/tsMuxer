@@ -20,8 +20,7 @@ unsigned ceilDiv(const unsigned a, const unsigned b) { return (a / b) + ((a % b)
 unsigned HevcUnit::extractUEGolombCode()
 {
     unsigned cnt = 0;
-    for (; !m_reader.getBit(); cnt++)
-        ;
+    for (; !m_reader.getBit(); cnt++);
     if (cnt > INT_BIT)
         THROW_BITSTREAM_ERR;
     return (1 << cnt) - 1 + m_reader.getBits(cnt);

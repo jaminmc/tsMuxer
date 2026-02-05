@@ -399,10 +399,8 @@ string trimStr(const string& value)
     const char* bufEnd = bufStart + value.length() - 1;
     const char* chBeg = bufStart;
     const char* chEnd = bufEnd;
-    for (; chBeg < bufEnd && (*chBeg == '\n' || *chBeg == '\r' || *chBeg == ' '); chBeg++)
-        ;
-    for (; chEnd >= chBeg && (*chEnd == '\n' || *chEnd == '\r' || *chEnd == ' '); chEnd--)
-        ;
+    for (; chBeg < bufEnd && (*chBeg == '\n' || *chBeg == '\r' || *chBeg == ' '); chBeg++);
+    for (; chEnd >= chBeg && (*chEnd == '\n' || *chEnd == '\r' || *chEnd == ' '); chEnd--);
     return value.substr(chBeg - bufStart, chEnd - chBeg + 1);
 }
 

@@ -27,16 +27,12 @@ SingleFileMuxerFactory singleFileMuxerFactory;
 static constexpr char EXCEPTION_ERR_MSG[] =
     ". It does not have to be! Please contact application support team for more information.";
 
-#define LTRACE2(level, msg)              \
-    {                                    \
-        {                                \
-            if ((level) <= LT_WARN)      \
-                cerr << msg;             \
-            else if ((level) == LT_INFO) \
-                cout << msg;             \
-            if ((level) <= LT_INFO)      \
-                sLastMsg = true;         \
-        }                                \
+#define LTRACE2(level, msg)                   \
+    {{if ((level) <= LT_WARN) cerr << msg;    \
+    else if ((level) == LT_INFO) cout << msg; \
+    if ((level) <= LT_INFO)                   \
+        sLastMsg = true;                      \
+    }                                         \
     }
 DiskType checkBluRayMux(const char* metaFileName, int& autoChapterLen, vector<double>& customChaptersList,
                         int& firstMplsOffset, int& firstM2tsOffset, bool& insertBlankPL, int& blankNum,

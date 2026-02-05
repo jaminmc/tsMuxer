@@ -11,7 +11,7 @@ namespace
 constexpr int NUM_ROWS = 4;
 constexpr int NUM_COLUMNS = 2;
 
-QString fontOptions(const QFont &font)
+QString fontOptions(const QFont& font)
 {
     QString optStr;
     if (font.italic())
@@ -37,7 +37,7 @@ QString fontOptions(const QFont &font)
     return optStr;
 }
 
-void stringToFontOptions(const QString &serialized, QFont &font)
+void stringToFontOptions(const QString& serialized, QFont& font)
 {
     font.setItalic(serialized.contains("Italic"));
     font.setBold(serialized.contains("Bold"));
@@ -48,7 +48,7 @@ void stringToFontOptions(const QString &serialized, QFont &font)
 int colorLight(QColor color) { return (0.257 * color.red()) + (0.504 * color.green()) + (0.098 * color.blue()) + 16; }
 }  // namespace
 
-FontSettingsTableModel::FontSettingsTableModel(QObject *parent) : QAbstractTableModel(parent)
+FontSettingsTableModel::FontSettingsTableModel(QObject* parent) : QAbstractTableModel(parent)
 {
     QSettings settings;
     settings.beginGroup("subtitles");
@@ -88,11 +88,11 @@ FontSettingsTableModel::~FontSettingsTableModel()
     settings.endGroup();
 }
 
-int FontSettingsTableModel::rowCount(const QModelIndex &) const { return NUM_ROWS; }
+int FontSettingsTableModel::rowCount(const QModelIndex&) const { return NUM_ROWS; }
 
-int FontSettingsTableModel::columnCount(const QModelIndex &) const { return NUM_COLUMNS; }
+int FontSettingsTableModel::columnCount(const QModelIndex&) const { return NUM_COLUMNS; }
 
-QVariant FontSettingsTableModel::data(const QModelIndex &index, int role) const
+QVariant FontSettingsTableModel::data(const QModelIndex& index, int role) const
 {
     if (!index.isValid())
     {
@@ -146,12 +146,12 @@ QVariant FontSettingsTableModel::data(const QModelIndex &index, int role) const
     }
 }
 
-Qt::ItemFlags FontSettingsTableModel::flags(const QModelIndex &index) const
+Qt::ItemFlags FontSettingsTableModel::flags(const QModelIndex& index) const
 {
     return QAbstractTableModel::flags(index) & (~Qt::ItemIsEditable);
 }
 
-void FontSettingsTableModel::setFont(const QFont &font)
+void FontSettingsTableModel::setFont(const QFont& font)
 {
     m_font = font;
     emit dataChanged(index(0, 1), index(3, 1));

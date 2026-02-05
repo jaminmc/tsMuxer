@@ -10,16 +10,16 @@ using namespace convertUTF;
 
 namespace
 {
-uint16_t read_be16(const uint8_t *p) { return static_cast<uint16_t>(p[0] << 8 | p[1]); }
-uint16_t read_le16(const uint8_t *p) { return static_cast<uint16_t>(p[0] | p[1] << 8); }
-uint32_t read_be32(const uint8_t *p) { return p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3]; }
-uint32_t read_le32(const uint8_t *p) { return p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24; }
+uint16_t read_be16(const uint8_t* p) { return static_cast<uint16_t>(p[0] << 8 | p[1]); }
+uint16_t read_le16(const uint8_t* p) { return static_cast<uint16_t>(p[0] | p[1] << 8); }
+uint32_t read_be32(const uint8_t* p) { return p[0] << 24 | p[1] << 16 | p[2] << 8 | p[3]; }
+uint32_t read_le32(const uint8_t* p) { return p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24; }
 
 template <typename R, typename... A>
 R get_fn_ret_type(R (*)(A...));
 
 template <typename F>
-auto make_vector(const uint8_t *start, size_t numBytes, F func) -> std::vector<decltype(get_fn_ret_type(func))>
+auto make_vector(const uint8_t* start, size_t numBytes, F func) -> std::vector<decltype(get_fn_ret_type(func))>
 {
     std::vector<decltype(get_fn_ret_type(func))> rv;
     const auto elem_size = sizeof(typename decltype(rv)::value_type);
@@ -38,13 +38,13 @@ auto make_vector(const uint8_t *start, size_t numBytes, F func) -> std::vector<d
 }
 
 template <typename InputType, typename F>
-std::string from_utf_nn(std::vector<InputType> &&vec, F conversionFn)
+std::string from_utf_nn(std::vector<InputType>&& vec, F conversionFn)
 {
     std::string rv;
     rv.resize(vec.size() * 4);
-    const InputType *sourceStart = vec.data();
+    const InputType* sourceStart = vec.data();
     auto sourceEnd = sourceStart + vec.size();
-    const auto targetStart = reinterpret_cast<UTF8 *>(rv.data());
+    const auto targetStart = reinterpret_cast<UTF8*>(rv.data());
     auto targetStart_out = targetStart;
     auto targetEnd = targetStart + rv.size();
     auto result = conversionFn(&sourceStart, sourceEnd, &targetStart_out, targetEnd, ConversionFlags::strictConversion);
@@ -59,7 +59,7 @@ std::string from_utf_nn(std::vector<InputType> &&vec, F conversionFn)
 
 namespace UtfConverter
 {
-std::string toUtf8(const uint8_t *start, const size_t numBytes, const SourceFormat srcFormat)
+std::string toUtf8(const uint8_t* start, const size_t numBytes, const SourceFormat srcFormat)
 {
     switch (srcFormat)
     {
@@ -76,7 +76,7 @@ std::string toUtf8(const uint8_t *start, const size_t numBytes, const SourceForm
 #ifdef _WIN32
     case SourceFormat::sfANSI:
     {
-        return ::toUtf8(fromAcp(reinterpret_cast<const char *>(start), static_cast<int>(numBytes)).data());
+        return ::toUtf8(fromAcp(reinterpret_cast<const char*>(start), static_cast<int>(numBytes)).data());
     }
 #endif
     default:

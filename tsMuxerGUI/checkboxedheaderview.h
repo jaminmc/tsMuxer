@@ -9,7 +9,7 @@ class QnCheckBoxedHeaderView : public QHeaderView
     typedef QHeaderView base_type;
 
    public:
-    explicit QnCheckBoxedHeaderView(QWidget *parent = nullptr);
+    explicit QnCheckBoxedHeaderView(QWidget* parent = nullptr);
 
     Qt::CheckState checkState() const { return m_checkState; }
     void setCheckState(Qt::CheckState state);
@@ -17,7 +17,7 @@ class QnCheckBoxedHeaderView : public QHeaderView
     void checkStateChanged(Qt::CheckState state);
 
    protected:
-    void paintSection(QPainter *painter, const QRect &rect, int logicalIndex) const override;
+    void paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const override;
     QSize sectionSizeFromContents(int logicalIndex) const override;
 
    private:

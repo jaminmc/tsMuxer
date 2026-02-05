@@ -42,7 +42,7 @@ const uint16_t Crc16Table[256] = {
     0x1CE0, 0x0CC1, 0xEF1F, 0xFF3E, 0xCF5D, 0xDF7C, 0xAF9B, 0xBFBA, 0x8FD9, 0x9FF8, 0x6E17, 0x7E36, 0x4E55, 0x5E74,
     0x2E93, 0x3EB2, 0x0ED1, 0x1EF0};
 
-unsigned short crc16(const unsigned char *pcBlock, unsigned short len)
+unsigned short crc16(const unsigned char* pcBlock, unsigned short len)
 {
     unsigned short crc = 0;
 
@@ -51,10 +51,10 @@ unsigned short crc16(const unsigned char *pcBlock, unsigned short len)
     return crc;
 }
 
-void writeDescriptorTag(uint8_t *buffer, DescriptorTag tag, const uint32_t tagLocation)
+void writeDescriptorTag(uint8_t* buffer, DescriptorTag tag, const uint32_t tagLocation)
 {
-    const auto buff16 = reinterpret_cast<uint16_t *>(buffer);
-    const auto buff32 = reinterpret_cast<uint32_t *>(buffer);
+    const auto buff16 = reinterpret_cast<uint16_t*>(buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(buffer);
     buff16[0] = static_cast<uint16_t>(tag);
     buff16[1] = 0x03;  // version
     // skip check sum and reserved byte here
@@ -65,10 +65,10 @@ void writeDescriptorTag(uint8_t *buffer, DescriptorTag tag, const uint32_t tagLo
     buff32[3] = tagLocation;  // tag location
 }
 
-std::string toIsoSeparator(const std::string &path)
+std::string toIsoSeparator(const std::string& path)
 {
     std::string result = path;
-    for (auto &i : result)
+    for (auto& i : result)
     {
         if (i == '\\')
             i = '/';
@@ -76,9 +76,9 @@ std::string toIsoSeparator(const std::string &path)
     return result;
 }
 
-void calcDescriptorCRC(uint8_t *buffer, const uint16_t len)
+void calcDescriptorCRC(uint8_t* buffer, const uint16_t len)
 {
-    const auto buff16 = reinterpret_cast<uint16_t *>(buffer);
+    const auto buff16 = reinterpret_cast<uint16_t*>(buffer);
 
     // calc crc
     buff16[4] = crc16(buffer + 16, len - 16);
@@ -90,11 +90,11 @@ void calcDescriptorCRC(uint8_t *buffer, const uint16_t len)
     buffer[4] = sum;
 }
 
-void writeTimestamp(uint8_t *buffer, const time_t time)
+void writeTimestamp(uint8_t* buffer, const time_t time)
 {
-    const auto buff16 = reinterpret_cast<uint16_t *>(buffer);
+    const auto buff16 = reinterpret_cast<uint16_t*>(buffer);
 
-    const tm *parts = localtime(&time);
+    const tm* parts = localtime(&time);
 
     const time_t lt = mktime(localtime(&time));
     const time_t gt = mktime(gmtime(&time));
@@ -112,17 +112,19 @@ void writeTimestamp(uint8_t *buffer, const time_t time)
     buffer[11] = 0;
 }
 
-bool canUse8BitUnicode(const std::string &utf8Str)
+bool canUse8BitUnicode(const std::string& utf8Str)
 {
     bool rv = true;
-    convertUTF::IterateUTF8Chars(utf8Str, [&](auto c) {
-        rv = (c < 0x100);
-        return rv;
-    });
+    convertUTF::IterateUTF8Chars(utf8Str,
+                                 [&](auto c)
+                                 {
+                                     rv = (c < 0x100);
+                                     return rv;
+                                 });
     return rv;
 }
 
-std::vector<std::uint8_t> serializeDString(const std::string &str, const size_t fieldLen)
+std::vector<std::uint8_t> serializeDString(const std::string& str, const size_t fieldLen)
 {
     if (str.empty())
     {
@@ -130,12 +132,12 @@ std::vector<std::uint8_t> serializeDString(const std::string &str, const size_t 
     }
     std::vector<std::uint8_t> rv;
 #ifdef _WIN32
-    const auto str_u8 = reinterpret_cast<const std::uint8_t *>(str.c_str());
+    const auto str_u8 = reinterpret_cast<const std::uint8_t*>(str.c_str());
     std::string utf8Str = convertUTF::isLegalUTF8String(str_u8, static_cast<int>(str.length()))
                               ? str
                               : UtfConverter::toUtf8(str_u8, str.length(), UtfConverter::SourceFormat::sfANSI);
 #else
-    auto &utf8Str = str;
+    auto& utf8Str = str;
 #endif
     using namespace convertUTF;
     const size_t maxHeaderAndContentLength = fieldLen - 1;
@@ -143,31 +145,35 @@ std::vector<std::uint8_t> serializeDString(const std::string &str, const size_t 
     if (canUse8BitUnicode(utf8Str))
     {
         rv.push_back(8);
-        IterateUTF8Chars(utf8Str, [&](const uint8_t c) {
-            rv.push_back(c);
-            return rv.size() < maxHeaderAndContentLength;
-        });
+        IterateUTF8Chars(utf8Str,
+                         [&](const uint8_t c)
+                         {
+                             rv.push_back(c);
+                             return rv.size() < maxHeaderAndContentLength;
+                         });
     }
     else
     {
         rv.push_back(16);
-        IterateUTF8Chars(utf8Str, [&](auto c) {
-            UTF16 high_surrogate, low_surrogate;
-            std::tie(high_surrogate, low_surrogate) = ConvertUTF32toUTF16(c);
-            const auto spaceLeft = maxHeaderAndContentLength - rv.size();
-            if ((spaceLeft < 2) || (low_surrogate && spaceLeft < 4))
-            {
-                return false;
-            }
-            rv.push_back(static_cast<uint8_t>(high_surrogate >> 8));
-            rv.push_back(static_cast<uint8_t>(high_surrogate));
-            if (low_surrogate)
-            {
-                rv.push_back(static_cast<uint8_t>(low_surrogate >> 8));
-                rv.push_back(static_cast<uint8_t>(low_surrogate));
-            }
-            return true;
-        });
+        IterateUTF8Chars(utf8Str,
+                         [&](auto c)
+                         {
+                             UTF16 high_surrogate, low_surrogate;
+                             std::tie(high_surrogate, low_surrogate) = ConvertUTF32toUTF16(c);
+                             const auto spaceLeft = maxHeaderAndContentLength - rv.size();
+                             if ((spaceLeft < 2) || (low_surrogate && spaceLeft < 4))
+                             {
+                                 return false;
+                             }
+                             rv.push_back(static_cast<uint8_t>(high_surrogate >> 8));
+                             rv.push_back(static_cast<uint8_t>(high_surrogate));
+                             if (low_surrogate)
+                             {
+                                 rv.push_back(static_cast<uint8_t>(low_surrogate >> 8));
+                                 rv.push_back(static_cast<uint8_t>(low_surrogate));
+                             }
+                             return true;
+                         });
     }
     const auto contentLength = static_cast<uint8_t>(rv.size());
     const auto paddingSize = maxHeaderAndContentLength - rv.size();
@@ -176,25 +182,25 @@ std::vector<std::uint8_t> serializeDString(const std::string &str, const size_t 
     return rv;
 }
 
-void writeDString(uint8_t *buffer, const char *value, const size_t fieldLen)
+void writeDString(uint8_t* buffer, const char* value, const size_t fieldLen)
 {
     auto content = serializeDString(value, fieldLen);
     assert(content.size() == fieldLen);
     std::copy(std::begin(content), std::end(content), buffer);
 }
 
-void writeUDFString(uint8_t *buffer, const char *str, const int len)
+void writeUDFString(uint8_t* buffer, const char* str, const int len)
 {
-    strcpy(reinterpret_cast<char *>(buffer) + 1, str);
+    strcpy(reinterpret_cast<char*>(buffer) + 1, str);
     buffer[len - 8] = 0x50;  // UDF suffix
     buffer[len - 7] = 0x02;  // UDF suffix
 }
 
-void writeLongAD(uint8_t *buffer, const uint32_t lenBytes, const uint32_t pos, const uint16_t partition,
+void writeLongAD(uint8_t* buffer, const uint32_t lenBytes, const uint32_t pos, const uint16_t partition,
                  const uint32_t id)
 {
-    const auto buff32 = reinterpret_cast<uint32_t *>(buffer);
-    const auto buff16 = reinterpret_cast<uint16_t *>(buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(buffer);
+    const auto buff16 = reinterpret_cast<uint16_t*>(buffer);
 
     buff32[0] = lenBytes;   // len
     buff32[1] = pos;        // location, block number
@@ -208,7 +214,7 @@ void writeLongAD(uint8_t *buffer, const uint32_t lenBytes, const uint32_t pos, c
 
 ByteFileWriter::ByteFileWriter() : m_buffer(nullptr), m_bufferEnd(nullptr), m_curPos(nullptr), m_tagPos(nullptr) {}
 
-void ByteFileWriter::setBuffer(uint8_t *buffer, const int len)
+void ByteFileWriter::setBuffer(uint8_t* buffer, const int len)
 {
     m_buffer = buffer;
     m_bufferEnd = buffer + len;
@@ -219,14 +225,14 @@ void ByteFileWriter::writeLE8(const uint8_t value) { *m_curPos++ = value; }
 
 void ByteFileWriter::writeLE16(const uint16_t value)
 {
-    const auto pos16 = reinterpret_cast<uint16_t *>(m_curPos);
+    const auto pos16 = reinterpret_cast<uint16_t*>(m_curPos);
     *pos16 = value;
     m_curPos += 2;
 }
 
 void ByteFileWriter::writeLE32(const uint32_t value)
 {
-    const auto pos32 = reinterpret_cast<uint32_t *>(m_curPos);
+    const auto pos32 = reinterpret_cast<uint32_t*>(m_curPos);
     *pos32 = value;
     m_curPos += 4;
 }
@@ -246,8 +252,8 @@ void ByteFileWriter::closeDescriptorTag(const int dataSize) const
 
 void ByteFileWriter::writeIcbTag(const uint8_t fileType)
 {
-    const auto buff32 = reinterpret_cast<uint32_t *>(m_curPos);
-    const auto buff16 = reinterpret_cast<uint16_t *>(m_curPos);
+    const auto buff32 = reinterpret_cast<uint32_t*>(m_curPos);
+    const auto buff16 = reinterpret_cast<uint16_t*>(m_curPos);
 
     // icb tag
     buff32[0] = 0;  // Prior Recorded Number of Direct Entries
@@ -269,14 +275,14 @@ void ByteFileWriter::writeLongAD(const uint32_t lenBytes, const uint32_t pos, co
     m_curPos += 16;
 }
 
-void ByteFileWriter::writeDString(const char *value, const int64_t len)
+void ByteFileWriter::writeDString(const char* value, const int64_t len)
 {
     const size_t writeLen = (len == -1) ? strlen(value) + 2 : len;
     ::writeDString(m_curPos, value, writeLen);
     m_curPos += writeLen;
 }
 
-void ByteFileWriter::writeDString(const std::string &value, const int64_t len) { writeDString(value.c_str(), len); }
+void ByteFileWriter::writeDString(const std::string& value, const int64_t len) { writeDString(value.c_str(), len); }
 
 void ByteFileWriter::doPadding(const int padSize)
 {
@@ -289,13 +295,13 @@ void ByteFileWriter::doPadding(const int padSize)
     }
 }
 
-void ByteFileWriter::writeCharSpecString(const char *value, const int len)
+void ByteFileWriter::writeCharSpecString(const char* value, const int len)
 {
-    strcpy(reinterpret_cast<char *>(m_curPos) + 1, value);
+    strcpy(reinterpret_cast<char*>(m_curPos) + 1, value);
     m_curPos += len;
 }
 
-void ByteFileWriter::writeUDFString(const char *value, const int len)
+void ByteFileWriter::writeUDFString(const char* value, const int len)
 {
     ::writeUDFString(m_curPos, value, len);
     m_curPos += len;
@@ -313,7 +319,7 @@ int64_t ByteFileWriter::size() const { return m_curPos - m_buffer; }
 
 // ------------------------------ FileEntryInfo ------------------------------------
 
-FileEntryInfo::FileEntryInfo(IsoWriter *owner, FileEntryInfo *parent, const uint8_t objectId, const FileTypes fileType)
+FileEntryInfo::FileEntryInfo(IsoWriter* owner, FileEntryInfo* parent, const uint8_t objectId, const FileTypes fileType)
     : m_owner(owner),
       m_parent(parent),
       m_sectorNum(0),
@@ -335,21 +341,21 @@ bool FileEntryInfo::isFile() const { return m_fileType == FileTypes::File || m_f
 FileEntryInfo::~FileEntryInfo()
 {
     delete[] m_sectorBuffer;
-    for (const auto &m_file : m_files) delete m_file;
-    for (const auto &m_subDir : m_subDirs) delete m_subDir;
+    for (const auto& m_file : m_files) delete m_file;
+    for (const auto& m_subDir : m_subDirs) delete m_subDir;
 }
 
-bool FileEntryInfo::setName(const std::string &name)
+bool FileEntryInfo::setName(const std::string& name)
 {
     m_name = name;
     return true;
 }
 
-void FileEntryInfo::addSubDir(FileEntryInfo *dir) { m_subDirs.push_back(dir); }
+void FileEntryInfo::addSubDir(FileEntryInfo* dir) { m_subDirs.push_back(dir); }
 
-void FileEntryInfo::addFile(FileEntryInfo *file) { m_files.push_back(file); }
+void FileEntryInfo::addFile(FileEntryInfo* file) { m_files.push_back(file); }
 
-void FileEntryInfo::writeEntity(ByteFileWriter &writer, const FileEntryInfo *subDir) const
+void FileEntryInfo::writeEntity(ByteFileWriter& writer, const FileEntryInfo* subDir) const
 {
     const bool isSystemFile = (m_objectId == 0);
 
@@ -419,8 +425,8 @@ void FileEntryInfo::serializeDir() const
     writer.closeDescriptorTag();
 
     // ------------ 2 (entries) ---------------
-    for (const auto &i : m_files) writeEntity(writer, i);
-    for (const auto &i : m_subDirs) writeEntity(writer, i);
+    for (const auto& i : m_files) writeEntity(writer, i);
+    for (const auto& i : m_subDirs) writeEntity(writer, i);
     assert(writer.size() < SECTOR_SIZE);  // not supported
 
     m_owner->writeExtendedFileEntryDescriptor(false, m_objectId, m_fileType, writer.size(), m_sectorNum + 1,
@@ -428,7 +434,7 @@ void FileEntryInfo::serializeDir() const
     m_owner->writeSector(buffer);
 }
 
-void FileEntryInfo::addExtent(const Extent &extent)
+void FileEntryInfo::addExtent(const Extent& extent)
 {
     if (m_extents.empty())
     {
@@ -445,7 +451,7 @@ void FileEntryInfo::addExtent(const Extent &extent)
     m_fileSize += extent.size;
 }
 
-int32_t FileEntryInfo::write(const uint8_t *data, const int32_t len)
+int32_t FileEntryInfo::write(const uint8_t* data, const int32_t len)
 {
     if (m_owner->m_lastWritedObjectID != m_objectId)
     {
@@ -508,9 +514,9 @@ void FileEntryInfo::close()
 
 void FileEntryInfo::setSubMode(const bool value) { m_subMode = value; }
 
-FileEntryInfo *FileEntryInfo::subDirByName(const std::string &name) const
+FileEntryInfo* FileEntryInfo::subDirByName(const std::string& name) const
 {
-    for (auto &i : m_subDirs)
+    for (auto& i : m_subDirs)
     {
         if (i->m_name == name)
             return i;
@@ -518,9 +524,9 @@ FileEntryInfo *FileEntryInfo::subDirByName(const std::string &name) const
     return nullptr;
 }
 
-FileEntryInfo *FileEntryInfo::fileByName(const std::string &name) const
+FileEntryInfo* FileEntryInfo::fileByName(const std::string& name) const
 {
-    for (auto &i : m_files)
+    for (auto& i : m_files)
     {
         if (i->m_name == name)
             return i;
@@ -530,14 +536,14 @@ FileEntryInfo *FileEntryInfo::fileByName(const std::string &name) const
 
 // --------------------------------- ISOFile -----------------------------------
 
-int ISOFile::write(const void *data, const uint32_t len)
+int ISOFile::write(const void* data, const uint32_t len)
 {
     if (m_entry)
-        return m_entry->write(static_cast<const uint8_t *>(data), static_cast<int32_t>(len));
+        return m_entry->write(static_cast<const uint8_t*>(data), static_cast<int32_t>(len));
     return -1;
 }
 
-bool ISOFile::open(const char *name, unsigned int oflag, unsigned int systemDependentFlags)
+bool ISOFile::open(const char* name, unsigned int oflag, unsigned int systemDependentFlags)
 {
     FileTypes fileType = FileTypes::File;
     if (strEndWith(name, ".m2ts") || strEndWith(name, ".ssif"))
@@ -566,7 +572,7 @@ int64_t ISOFile::size() const { return m_entry ? m_entry->m_fileSize : -1; }
 
 // ------------------------------ IsoWriter ----------------------------------
 
-IsoWriter::IsoWriter(const IsoHeaderData &hdrData)
+IsoWriter::IsoWriter(const IsoHeaderData& hdrData)
     : m_impId(hdrData.impId),
       m_appId(hdrData.appId),
       m_volumeId(hdrData.volumeId),
@@ -605,14 +611,14 @@ IsoWriter::~IsoWriter()
 
 void IsoWriter::setMetaPartitionSize(const int size) { m_metadataFileLen = roundUp(size, ALLOC_BLOCK_SIZE); }
 
-void IsoWriter::setVolumeLabel(const std::string &value)
+void IsoWriter::setVolumeLabel(const std::string& value)
 {
     m_volumeLabel = value;
     if (m_volumeLabel.empty())
         m_volumeLabel = "Blu-Ray";
 }
 
-bool IsoWriter::open(const std::string &fileName, const int64_t diskSize, const int extraISOBlocks)
+bool IsoWriter::open(const std::string& fileName, const int64_t diskSize, const int extraISOBlocks)
 {
     constexpr int systemFlags = 0;
     if (!m_file.open(fileName.c_str(), File::ofWrite, systemFlags))
@@ -701,7 +707,7 @@ bool IsoWriter::open(const std::string &fileName, const int64_t diskSize, const 
 
 // ----------- descriptors --------------
 
-FileEntryInfo *IsoWriter::mkdir(const char *name, FileEntryInfo *parent)
+FileEntryInfo* IsoWriter::mkdir(const char* name, FileEntryInfo* parent)
 {
     if (!m_rootDirInfo)
         return nullptr;
@@ -716,26 +722,26 @@ FileEntryInfo *IsoWriter::mkdir(const char *name, FileEntryInfo *parent)
     return dir;
 }
 
-bool IsoWriter::createDir(const std::string &dir)
+bool IsoWriter::createDir(const std::string& dir)
 {
     getEntryByName(toIsoSeparator(dir), FileTypes::Directory);
     return true;
 }
 
-ISOFile *IsoWriter::createFile() { return new ISOFile(this); }
+ISOFile* IsoWriter::createFile() { return new ISOFile(this); }
 
-bool IsoWriter::createInterleavedFile(const std::string &inFile1, const std::string &inFile2,
-                                      const std::string &outFile)
+bool IsoWriter::createInterleavedFile(const std::string& inFile1, const std::string& inFile2,
+                                      const std::string& outFile)
 {
-    const FileEntryInfo *inEntry1 = getEntryByName(toIsoSeparator(inFile1), FileTypes::RealtimeFile);
+    const FileEntryInfo* inEntry1 = getEntryByName(toIsoSeparator(inFile1), FileTypes::RealtimeFile);
     if (!inEntry1)
         return false;
 
-    const FileEntryInfo *inEntry2 = getEntryByName(toIsoSeparator(inFile2), FileTypes::RealtimeFile);
+    const FileEntryInfo* inEntry2 = getEntryByName(toIsoSeparator(inFile2), FileTypes::RealtimeFile);
     if (!inEntry2)
         return false;
 
-    FileEntryInfo *outEntry = getEntryByName(toIsoSeparator(outFile), FileTypes::RealtimeFile);
+    FileEntryInfo* outEntry = getEntryByName(toIsoSeparator(outFile), FileTypes::RealtimeFile);
     if (!outEntry)
         return false;
 
@@ -754,7 +760,7 @@ bool IsoWriter::createInterleavedFile(const std::string &inFile1, const std::str
     return true;
 }
 
-FileEntryInfo *IsoWriter::createFileEntry(FileEntryInfo *parent, const FileTypes fileType)
+FileEntryInfo* IsoWriter::createFileEntry(FileEntryInfo* parent, const FileTypes fileType)
 {
     if (!m_rootDirInfo)
         return nullptr;
@@ -766,17 +772,17 @@ FileEntryInfo *IsoWriter::createFileEntry(FileEntryInfo *parent, const FileTypes
     return file;
 }
 
-FileEntryInfo *IsoWriter::getEntryByName(const std::string &name, const FileTypes fileType)
+FileEntryInfo* IsoWriter::getEntryByName(const std::string& name, const FileTypes fileType)
 {
     const std::vector<std::string> parts = splitStr(name.c_str(), '/');
-    FileEntryInfo *entry = m_rootDirInfo;
+    FileEntryInfo* entry = m_rootDirInfo;
     if (!entry)
         return nullptr;
     const bool isDir = fileType == FileTypes::Directory || fileType == FileTypes::SystemStreamDirectory;
     const size_t idxMax = isDir ? parts.size() : parts.size() - 1;
     for (size_t i = 0; i < idxMax; ++i)
     {
-        FileEntryInfo *nextEntry = entry->subDirByName(parts[i]);
+        FileEntryInfo* nextEntry = entry->subDirByName(parts[i]);
         if (!nextEntry)
             nextEntry = mkdir(parts[i].c_str(), entry);
         entry = nextEntry;
@@ -787,7 +793,7 @@ FileEntryInfo *IsoWriter::getEntryByName(const std::string &name, const FileType
     const std::string fileName = *parts.rbegin();
     if (fileName.empty())
         return entry;
-    FileEntryInfo *fileEntry = entry->fileByName(fileName);
+    FileEntryInfo* fileEntry = entry->fileByName(fileName);
     if (!fileEntry)
     {
         fileEntry = createFileEntry(entry, fileType);
@@ -837,7 +843,7 @@ void IsoWriter::allocateMetadata()
     writer.writeLE32(0);  // reserved
     writer.writeLE32(0);  // reserved
 
-    for (const auto &mappingEntry : m_mappingEntries)
+    for (const auto& mappingEntry : m_mappingEntries)
     {
         writer.writeLE32(mappingEntry.first);  // unique ID
         writer.writeLE32(mappingEntry.second.parentLBN);
@@ -946,14 +952,14 @@ void IsoWriter::sectorSeek(const Partition partition, const int pos) const
     m_file.seek((offset + pos) * SECTOR_SIZE, File::SeekMethod::smBegin);
 }
 
-void IsoWriter::writeEntity(const FileEntryInfo *dir)
+void IsoWriter::writeEntity(const FileEntryInfo* dir)
 {
     dir->serialize();
-    for (const auto &i : dir->m_files) writeEntity(i);
-    for (const auto &i : dir->m_subDirs) writeEntity(i);
+    for (const auto& i : dir->m_files) writeEntity(i);
+    for (const auto& i : dir->m_subDirs) writeEntity(i);
 }
 
-int IsoWriter::allocateEntity(FileEntryInfo *entity, int sectorNum)
+int IsoWriter::allocateEntity(FileEntryInfo* entity, int sectorNum)
 {
     if ((entity->m_fileType == FileTypes::File || entity->m_fileType == FileTypes::RealtimeFile) && entity->m_objectId)
         m_totalFiles++;
@@ -964,18 +970,18 @@ int IsoWriter::allocateEntity(FileEntryInfo *entity, int sectorNum)
     if (entity->m_objectId)
         m_mappingEntries[entity->m_objectId] = MappingEntry(entity->m_parent->m_sectorNum, entity->m_sectorNum);
 
-    for (const auto &i : entity->m_files) sectorNum = allocateEntity(i, sectorNum);
-    for (const auto &i : entity->m_subDirs) sectorNum = allocateEntity(i, sectorNum);
+    for (const auto& i : entity->m_files) sectorNum = allocateEntity(i, sectorNum);
+    for (const auto& i : entity->m_subDirs) sectorNum = allocateEntity(i, sectorNum);
     return sectorNum;
 }
 
-void IsoWriter::writeAllocationExtentDescriptor(const ExtentList *extents, const size_t start, const size_t indexEnd)
+void IsoWriter::writeAllocationExtentDescriptor(const ExtentList* extents, const size_t start, const size_t indexEnd)
 {
-    const auto buff32 = reinterpret_cast<uint32_t *>(m_buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(m_buffer);
     memset(m_buffer, 0, sizeof(m_buffer));
     writeDescriptorTag(m_buffer, DescriptorTag::AllocationExtent, absoluteSectorNum());
 
-    uint8_t *curPos = m_buffer + 24;
+    uint8_t* curPos = m_buffer + 24;
     for (size_t i = start; i < indexEnd; ++i)
     {
         writeLongAD(curPos, static_cast<uint32_t>(extents->at(i).size), extents->at(i).lbnPos, 0, 0);
@@ -994,16 +1000,16 @@ void IsoWriter::writeAllocationExtentDescriptor(const ExtentList *extents, const
 
 int IsoWriter::writeExtendedFileEntryDescriptor(const bool namedStream, const uint8_t objectId,
                                                 const FileTypes fileType, const uint64_t len, const uint32_t pos,
-                                                const uint16_t linkCount, const ExtentList *extents)
+                                                const uint16_t linkCount, const ExtentList* extents)
 {
     int sectorsWrited = 0;
 
     memset(m_buffer, 0, sizeof(m_buffer));
     writeDescriptorTag(m_buffer, DescriptorTag::ExtendedFileEntry, absoluteSectorNum());
 
-    const auto buff32 = reinterpret_cast<uint32_t *>(m_buffer);
-    const auto buff16 = reinterpret_cast<uint16_t *>(m_buffer);
-    const auto buff64 = reinterpret_cast<uint64_t *>(m_buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(m_buffer);
+    const auto buff16 = reinterpret_cast<uint16_t*>(m_buffer);
+    const auto buff64 = reinterpret_cast<uint64_t*>(m_buffer);
 
     writeIcbTag(namedStream, m_buffer + 16, fileType);
 
@@ -1047,8 +1053,8 @@ int IsoWriter::writeExtendedFileEntryDescriptor(const bool namedStream, const ui
     // skip Extended Attribute ICB
     // skip Stream Directory ICB
 
-    strcpy(reinterpret_cast<char *>(m_buffer) + 169, m_impId.c_str());  // Implementation Identifier
-    m_buffer[200] = objectId;                                           // Unique ID
+    strcpy(reinterpret_cast<char*>(m_buffer) + 169, m_impId.c_str());  // Implementation Identifier
+    m_buffer[200] = objectId;                                          // Unique ID
 
     // skip Length of Extended Attributes
     if (fileType != FileTypes::File && fileType != FileTypes::RealtimeFile)
@@ -1076,7 +1082,7 @@ int IsoWriter::writeExtendedFileEntryDescriptor(const bool namedStream, const ui
         if (extents->size() - indexEnd == 1)
             indexEnd++;  // continue record may be replaced by payload data
         buff32[212 / 4] = static_cast<uint32_t>(0x10 * indexEnd);
-        uint8_t *curPos = m_buffer + 216;
+        uint8_t* curPos = m_buffer + 216;
         for (size_t i = 0; i < indexEnd; ++i)
         {
             writeLongAD(curPos, static_cast<uint32_t>(extents->at(i).size), extents->at(i).lbnPos, 0, 0);
@@ -1107,10 +1113,10 @@ int IsoWriter::writeExtendedFileEntryDescriptor(const bool namedStream, const ui
     return sectorsWrited;
 }
 
-void IsoWriter::writeIcbTag(const bool namedStream, uint8_t *buffer, FileTypes fileType)
+void IsoWriter::writeIcbTag(const bool namedStream, uint8_t* buffer, FileTypes fileType)
 {
-    const auto buff32 = reinterpret_cast<uint32_t *>(buffer);
-    const auto buff16 = reinterpret_cast<uint16_t *>(buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(buffer);
+    const auto buff16 = reinterpret_cast<uint16_t*>(buffer);
 
     // icb tag
     buff32[0] = 0;  // Prior Recorded Number of Direct Entries
@@ -1185,26 +1191,26 @@ void IsoWriter::writePrimaryVolumeDescriptor()
 
     // Descriptor Character Set
     m_buffer[200] = 0x00;  // CS0 coded character set
-    strcpy(reinterpret_cast<char *>(m_buffer) + 201, "OSTA Compressed Unicode");
+    strcpy(reinterpret_cast<char*>(m_buffer) + 201, "OSTA Compressed Unicode");
 
     // Explanatory Character Set
     m_buffer[264] = 0x00;  // CS0 coded character set
-    strcpy(reinterpret_cast<char *>(m_buffer) + 265, "OSTA Compressed Unicode");
+    strcpy(reinterpret_cast<char*>(m_buffer) + 265, "OSTA Compressed Unicode");
 
     // skip Volume Abstract
     // skip Volume Copyright Notice
 
     // Application Identifier
     m_buffer[344] = 0x00;  // CS0 coded character set
-    strcpy(reinterpret_cast<char *>(m_buffer) + 345, m_appId.c_str());
+    strcpy(reinterpret_cast<char*>(m_buffer) + 345, m_appId.c_str());
 
     writeTimestamp(m_buffer + 376, m_currentTime);  // timestamp
 
     // Implementation Identifier
     m_buffer[388] = 0x00;  // CS0 coded character set
-    strcpy(reinterpret_cast<char *>(m_buffer) + 389, m_impId.c_str());
+    strcpy(reinterpret_cast<char*>(m_buffer) + 389, m_impId.c_str());
 
-    strcpy(reinterpret_cast<char *>(m_buffer) + 420, m_appId.c_str());
+    strcpy(reinterpret_cast<char*>(m_buffer) + 420, m_appId.c_str());
 
     // skip Predecessor Volume Descriptor Sequence Location (BP 484) = 0L
     m_buffer[488] = 1;  // Flags (BP 488)
@@ -1220,7 +1226,7 @@ void IsoWriter::writeImpUseDescriptor()
     memset(m_buffer, 0, sizeof(m_buffer));
     writeDescriptorTag(m_buffer, DescriptorTag::ImplUseVol, absoluteSectorNum());
 
-    const auto buff32 = reinterpret_cast<uint32_t *>(m_buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(m_buffer);
     buff32[4] = 0x01;  // Descriptor Sequence Number
 
     const std::string impId = std::string("*UDF LV Info");
@@ -1229,13 +1235,13 @@ void IsoWriter::writeImpUseDescriptor()
 
     // Explanatory Character Set
     m_buffer[52] = 0x00;  // CS0 coded character set
-    strcpy(reinterpret_cast<char *>(m_buffer) + 53, "OSTA Compressed Unicode");
+    strcpy(reinterpret_cast<char*>(m_buffer) + 53, "OSTA Compressed Unicode");
 
     // logical volume identifier
     writeDString(m_buffer + 116, m_volumeLabel.c_str(), 128);
 
-    strcpy(reinterpret_cast<char *>(m_buffer) + 0x161, m_impId.c_str());  // ImplementationID
-    strcpy(reinterpret_cast<char *>(m_buffer) + 0x180, m_appId.c_str());  // ImplementationUse
+    strcpy(reinterpret_cast<char*>(m_buffer) + 0x161, m_impId.c_str());  // ImplementationID
+    strcpy(reinterpret_cast<char*>(m_buffer) + 0x180, m_appId.c_str());  // ImplementationUse
 
     calcDescriptorCRC(m_buffer, 512);
     m_file.write(m_buffer, SECTOR_SIZE);
@@ -1246,19 +1252,19 @@ void IsoWriter::writePartitionDescriptor()
     memset(m_buffer, 0, sizeof(m_buffer));
     writeDescriptorTag(m_buffer, DescriptorTag::Partition, absoluteSectorNum());
 
-    const auto buff32 = reinterpret_cast<uint32_t *>(m_buffer);
-    const auto buff16 = reinterpret_cast<uint16_t *>(m_buffer);
-    buff32[4] = 0x02;                                           // Descriptor Sequence Number
-    buff16[10] = 0x01;                                          // partition flags
-    buff16[11] = 0x00;                                          // Partition Number
-    strcpy(reinterpret_cast<char *>(m_buffer) + 25, "+NSR03");  // Partition Contents
+    const auto buff32 = reinterpret_cast<uint32_t*>(m_buffer);
+    const auto buff16 = reinterpret_cast<uint16_t*>(m_buffer);
+    buff32[4] = 0x02;                                          // Descriptor Sequence Number
+    buff16[10] = 0x01;                                         // partition flags
+    buff16[11] = 0x00;                                         // Partition Number
+    strcpy(reinterpret_cast<char*>(m_buffer) + 25, "+NSR03");  // Partition Contents
     // skip Partition Header Descriptor (all zero)
     buff32[184 / 4] = 0x01;                                             // Access Type
     buff32[188 / 4] = m_partitionStartAddress;                          // Partition Starting Location (576K address )
     buff32[192 / 4] = m_partitionEndAddress - m_partitionStartAddress;  // Partition Length field
 
-    strcpy(reinterpret_cast<char *>(m_buffer) + 0xc5, m_impId.c_str());  // ImplementationID
-    strcpy(reinterpret_cast<char *>(m_buffer) + 0xe4, m_appId.c_str());  // ImplementationUse
+    strcpy(reinterpret_cast<char*>(m_buffer) + 0xc5, m_impId.c_str());  // ImplementationID
+    strcpy(reinterpret_cast<char*>(m_buffer) + 0xe4, m_appId.c_str());  // ImplementationUse
 
     calcDescriptorCRC(m_buffer, 512);
     m_file.write(m_buffer, SECTOR_SIZE);
@@ -1268,11 +1274,11 @@ void IsoWriter::writeLogicalVolumeDescriptor()
 {
     memset(m_buffer, 0, sizeof(m_buffer));
     writeDescriptorTag(m_buffer, DescriptorTag::LogicalVol, absoluteSectorNum());
-    const auto buff32 = reinterpret_cast<uint32_t *>(m_buffer);
-    const auto buff16 = reinterpret_cast<uint16_t *>(m_buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(m_buffer);
+    const auto buff16 = reinterpret_cast<uint16_t*>(m_buffer);
 
-    buff32[4] = 0x03;                                                            // Volume Descriptor Sequence Number
-    strcpy(reinterpret_cast<char *>(m_buffer) + 21, "OSTA Compressed Unicode");  // Descriptor Character Set
+    buff32[4] = 0x03;                                                           // Volume Descriptor Sequence Number
+    strcpy(reinterpret_cast<char*>(m_buffer) + 21, "OSTA Compressed Unicode");  // Descriptor Character Set
     // Logical Volume Identifier
     writeDString(m_buffer + 84, m_volumeLabel.c_str(), 128);
     buff32[212 / 4] = SECTOR_SIZE;                              // Logical Block Size
@@ -1289,8 +1295,8 @@ void IsoWriter::writeLogicalVolumeDescriptor()
     m_buffer[268] = 0x02;  // Number of Partition Maps.
 
     // Implementation Identifier
-    strcpy(reinterpret_cast<char *>(m_buffer) + 273, m_impId.c_str());
-    strcpy(reinterpret_cast<char *>(m_buffer) + 304, m_appId.c_str());
+    strcpy(reinterpret_cast<char*>(m_buffer) + 273, m_impId.c_str());
+    strcpy(reinterpret_cast<char*>(m_buffer) + 304, m_appId.c_str());
 
     // Integrity Sequence Extent
     buff32[432 / 4] = 0x8000;
@@ -1333,7 +1339,7 @@ void IsoWriter::writeUnallocatedSpaceDescriptor()
     memset(m_buffer, 0, sizeof(m_buffer));
     writeDescriptorTag(m_buffer, DescriptorTag::UnallocSpace, absoluteSectorNum());
 
-    const auto buff32 = reinterpret_cast<uint32_t *>(m_buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(m_buffer);
 
     buff32[4] = 0x04;  // sequence number
 
@@ -1355,8 +1361,8 @@ void IsoWriter::writeLogicalVolumeIntegrityDescriptor()
     memset(m_buffer, 0, sizeof(m_buffer));
     writeDescriptorTag(m_buffer, DescriptorTag::LogicalVolIntegrity, absoluteSectorNum());
 
-    const auto buff32 = reinterpret_cast<uint32_t *>(m_buffer);
-    const auto buff16 = reinterpret_cast<uint16_t *>(m_buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(m_buffer);
+    const auto buff16 = reinterpret_cast<uint16_t*>(m_buffer);
 
     writeTimestamp(m_buffer + 16, m_currentTime);
     buff32[7] = 0x01;              // Integrity Type
@@ -1371,7 +1377,7 @@ void IsoWriter::writeLogicalVolumeIntegrityDescriptor()
     buff32[88 / 4] = m_partitionEndAddress - m_partitionStartAddress;  // main partition size
     buff32[92 / 4] = m_metadataFileLen / SECTOR_SIZE;
 
-    strcpy(reinterpret_cast<char *>(m_buffer) + 97, m_impId.c_str());
+    strcpy(reinterpret_cast<char*>(m_buffer) + 97, m_impId.c_str());
 
     buff32[0x80 / 4] = m_totalFiles;
     buff32[0x84 / 4] = m_totalDirectories;
@@ -1379,7 +1385,7 @@ void IsoWriter::writeLogicalVolumeIntegrityDescriptor()
     buff16[0x8a / 2] = 0x0250;  // Minimum UDF Write Revision
     buff16[0x8c / 2] = 0x0250;  // Maximum UDF Write Revision
 
-    strcpy(reinterpret_cast<char *>(m_buffer) + 142, m_appId.c_str());
+    strcpy(reinterpret_cast<char*>(m_buffer) + 142, m_appId.c_str());
 
     calcDescriptorCRC(m_buffer, static_cast<uint16_t>(142 + m_appId.size()));
     m_file.write(m_buffer, SECTOR_SIZE);
@@ -1390,7 +1396,7 @@ void IsoWriter::writeAnchorVolumeDescriptor(const uint32_t endPartitionAddr)
     memset(m_buffer, 0, sizeof(m_buffer));
     writeDescriptorTag(m_buffer, DescriptorTag::AnchorVolPtr, absoluteSectorNum());
 
-    const auto buff32 = reinterpret_cast<uint32_t *>(m_buffer);
+    const auto buff32 = reinterpret_cast<uint32_t*>(m_buffer);
     buff32[4] = 0x8000;  // point of the main volume descriptor
     buff32[5] = 0x20;
     buff32[6] = 0x8000;
@@ -1400,9 +1406,9 @@ void IsoWriter::writeAnchorVolumeDescriptor(const uint32_t endPartitionAddr)
     m_file.write(m_buffer, SECTOR_SIZE);
 }
 
-void IsoWriter::writeSector(const uint8_t *sectorData) { m_file.write(sectorData, SECTOR_SIZE); }
+void IsoWriter::writeSector(const uint8_t* sectorData) { m_file.write(sectorData, SECTOR_SIZE); }
 
-int IsoWriter::writeRawData(const uint8_t *data, const int size) { return m_file.write(data, size); }
+int IsoWriter::writeRawData(const uint8_t* data, const int size) { return m_file.write(data, size); }
 
 void IsoWriter::checkLayerBreakPoint(const int maxExtentSize)
 {

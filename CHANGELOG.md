@@ -3,6 +3,8 @@
 - Fixed browse button for output folder passing wrong parameter to file dialog
 - Consolidated file type filters in add dialog to reduce dropdown size
 - Added automatic copying of tsMuxeR CLI into macOS app bundle during build
+
+## tsMuxeR 2.7.0
 - Fixed a an issue so that Dolby Vision EL stream type is now correct 
 - Fixed a bug with HEVC streams when an HDR10+ SEI payload is too short
 - Fixed a bug where the first 2 frames of the first video track are muxed before anything else

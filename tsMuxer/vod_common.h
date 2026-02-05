@@ -15,7 +15,7 @@ extern bool sLastMsg;
     do                                             \
     {                                              \
         {                                          \
-            if ((errIndex)&2)                      \
+            if ((errIndex) & 2)                    \
             {                                      \
                 if ((level) <= LT_WARN)            \
                     std::cerr << msg << std::endl; \

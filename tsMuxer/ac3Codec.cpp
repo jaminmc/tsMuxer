@@ -10,9 +10,9 @@
 static constexpr int NB_BLOCKS = 6;  // number of PCM blocks inside an AC3 frame
 static constexpr int AC3_FRAME_SIZE = NB_BLOCKS * 256;
 
-bool isSyncWord(const uint8_t *buff) { return buff[0] == 0x0B && buff[1] == 0x77; }
+bool isSyncWord(const uint8_t* buff) { return buff[0] == 0x0B && buff[1] == 0x77; }
 
-bool isHDSyncWord(const uint8_t *buff) { return buff[0] == 0xf8 && buff[1] == 0x72 && buff[2] == 0x6f; }
+bool isHDSyncWord(const uint8_t* buff) { return buff[0] == 0xf8 && buff[1] == 0x72 && buff[2] == 0x6f; }
 
 static constexpr uint8_t eac3_blocks[4] = {1, 2, 3, 6};
 
@@ -62,7 +62,7 @@ static const uint16_t ctx[256] = {
 static constexpr int AC3_ACMOD_MONO = 1;
 static constexpr int AC3_ACMOD_STEREO = 2;
 
-const CodecInfo &AC3Codec::getCodecInfo()
+const CodecInfo& AC3Codec::getCodecInfo()
 {
     if (m_true_hd_mode)
         return trueHDCodecInfo;
@@ -72,9 +72,9 @@ const CodecInfo &AC3Codec::getCodecInfo()
 }
 
 // returns true if ok, or false if error
-bool AC3Codec::crc32(const uint8_t *buf, const int length)
+bool AC3Codec::crc32(const uint8_t* buf, const int length)
 {
-    const uint8_t *end = buf + length;
+    const uint8_t* end = buf + length;
 
     int crc = 0;
     while (buf < end) crc = ctx[static_cast<uint8_t>(crc) ^ *buf++] ^ (crc >> 8);
@@ -87,7 +87,7 @@ bool AC3Codec::crc32(const uint8_t *buf, const int length)
 }
 
 // returns NO_ERROR, or type of error
-AC3Codec::AC3ParseError AC3Codec::parseHeader(uint8_t *buf, const uint8_t *end)
+AC3Codec::AC3ParseError AC3Codec::parseHeader(uint8_t* buf, const uint8_t* end)
 {
     if (*buf++ != 0x0B || *buf++ != 0x77)
         return AC3ParseError::SYNC;
@@ -359,7 +359,7 @@ AC3Codec::AC3ParseError AC3Codec::parseHeader(uint8_t *buf, const uint8_t *end)
 }
 
 // returns frame length, or zero (error), or NOT_ENOUGH_BUFFER
-int AC3Codec::decodeFrame(uint8_t *buf, uint8_t *end, int &skipBytes)
+int AC3Codec::decodeFrame(uint8_t* buf, uint8_t* end, int& skipBytes)
 {
     try
     {
@@ -390,7 +390,7 @@ int AC3Codec::decodeFrame(uint8_t *buf, uint8_t *end, int &skipBytes)
 
         if (getTestMode() && !m_true_hd_mode)
         {
-            uint8_t *trueHDData = buf + rez;
+            uint8_t* trueHDData = buf + rez;
             if (end - trueHDData < 8)
                 return NOT_ENOUGH_BUFFER;
             if (!isSyncWord(trueHDData) && isHDSyncWord(trueHDData + 4))
@@ -403,7 +403,7 @@ int AC3Codec::decodeFrame(uint8_t *buf, uint8_t *end, int &skipBytes)
 
         if ((m_true_hd_mode))  // omit AC3+
         {
-            uint8_t *trueHDData = buf + rez;
+            uint8_t* trueHDData = buf + rez;
             if (end - trueHDData < 7)
                 return NOT_ENOUGH_BUFFER;
             if (m_state == AC3State::stateDecodeAC3)
@@ -427,7 +427,7 @@ int AC3Codec::decodeFrame(uint8_t *buf, uint8_t *end, int &skipBytes)
             {
                 m_true_hd_mode = mlp.decodeFrame(trueHDData, trueHDData + trueHDFrameLen);
             }
-            uint8_t *nextFrame = trueHDData + trueHDFrameLen;
+            uint8_t* nextFrame = trueHDData + trueHDFrameLen;
 
             if (nextFrame[0] == 0x0B && nextFrame[1] == 0x77 && testDecodeTestFrame(nextFrame, end))
                 m_waitMoreData = false;
@@ -446,13 +446,13 @@ int AC3Codec::decodeFrame(uint8_t *buf, uint8_t *end, int &skipBytes)
         }
         return rez;
     }
-    catch (BitStreamException &)
+    catch (BitStreamException&)
     {
         return NOT_ENOUGH_BUFFER;
     }
 }
 
-AC3Codec::AC3ParseError AC3Codec::testParseHeader(uint8_t *buf, uint8_t *end) const
+AC3Codec::AC3ParseError AC3Codec::testParseHeader(uint8_t* buf, uint8_t* end) const
 {
     BitStreamReader gbc{};
     gbc.setBuffer(buf, buf + 7);
@@ -522,7 +522,7 @@ AC3Codec::AC3ParseError AC3Codec::testParseHeader(uint8_t *buf, uint8_t *end) co
     return AC3ParseError::NO_ERROR;
 }
 
-bool AC3Codec::testDecodeTestFrame(uint8_t *buf, uint8_t *end) const
+bool AC3Codec::testDecodeTestFrame(uint8_t* buf, uint8_t* end) const
 {
     return testParseHeader(buf, end) == AC3ParseError::NO_ERROR;
 }
@@ -596,11 +596,11 @@ const std::string AC3Codec::getStreamInfo()
     return str.str();
 }
 
-uint8_t *AC3Codec::findFrame(uint8_t *buffer, const uint8_t *end)
+uint8_t* AC3Codec::findFrame(uint8_t* buffer, const uint8_t* end)
 {
     if (buffer == nullptr)
         return nullptr;
-    uint8_t *curBuf = buffer;
+    uint8_t* curBuf = buffer;
     while (curBuf < end - 1)
     {
         if (*curBuf == 0x0B && curBuf[1] == 0x77)

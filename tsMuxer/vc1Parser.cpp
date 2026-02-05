@@ -19,8 +19,7 @@ namespace
 int get_unary(BitStreamReader& bitReader, const bool stop, const int len)
 {
     int i;
-    for (i = 0; i < len && bitReader.getBit() != stop; i++)
-        ;
+    for (i = 0; i < len && bitReader.getBit() != stop; i++);
     return i;
 }
 

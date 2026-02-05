@@ -202,8 +202,7 @@ unsigned NALUnit::extractUEGolombCode(uint8_t* buffer, const uint8_t* bufEnd)
 unsigned NALUnit::extractUEGolombCode()
 {
     unsigned cnt = 0;
-    for (; bitReader.getBit() == 0; cnt++)
-        ;
+    for (; bitReader.getBit() == 0; cnt++);
     if (cnt > INT_BIT)
         THROW_BITSTREAM_ERR;
     return (1 << cnt) - 1 + bitReader.getBits(cnt);
@@ -235,8 +234,7 @@ void NALUnit::writeUEGolombCode(BitStreamWriter& bitWriter, const uint32_t value
 unsigned NALUnit::extractUEGolombCode(BitStreamReader& bitReader)
 {
     int cnt = 0;
-    for (; bitReader.getBit() == 0; cnt++)
-        ;
+    for (; bitReader.getBit() == 0; cnt++);
     return (1 << cnt) - 1 + bitReader.getBits(cnt);
 }
 

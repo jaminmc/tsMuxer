@@ -8,7 +8,7 @@
 static constexpr uint64_t MAX_PTS = 8589934592 - 1;
 static constexpr uint8_t PES_DATA_ALIGNMENT = 4;
 
-static int64_t get_pts(const uint8_t *p)
+static int64_t get_pts(const uint8_t* p)
 {
     auto pts = static_cast<int64_t>((p[0] >> 1) & 0x07) << 30;
     int val = p[1] << 8 | p[2];
@@ -18,7 +18,7 @@ static int64_t get_pts(const uint8_t *p)
     return pts;
 }
 
-static void set_pts_int(uint8_t *p, const int64_t pts, const int preffix)
+static void set_pts_int(uint8_t* p, const int64_t pts, const int preffix)
 {
     p[0] = static_cast<uint8_t>(preffix + (((pts >> 30) & 0x07) << 1) + 1);
     uint16_t val = static_cast<uint16_t>(((pts >> 15) & 0x7fff) << 1) + 1;
@@ -159,18 +159,18 @@ struct PESPacket
         flagsLo = 0;
     }
 
-    int64_t getPts() { return get_pts(reinterpret_cast<uint8_t *>(this) + HEADER_SIZE); }
-    int64_t getDts() { return get_pts(reinterpret_cast<uint8_t *>(this) + HEADER_SIZE + PTS_SIZE); }
+    int64_t getPts() { return get_pts(reinterpret_cast<uint8_t*>(this) + HEADER_SIZE); }
+    int64_t getDts() { return get_pts(reinterpret_cast<uint8_t*>(this) + HEADER_SIZE + PTS_SIZE); }
 
     void setPts(const int64_t pts)
     {
-        set_pts_int(reinterpret_cast<uint8_t *>(this) + HEADER_SIZE, pts, 0x20);
+        set_pts_int(reinterpret_cast<uint8_t*>(this) + HEADER_SIZE, pts, 0x20);
         flagsLo = (flagsLo & 0x3f) | 0x80;
     }
     void setPtsAndDts(const int64_t pts, const int64_t dts)
     {
-        set_pts_int(reinterpret_cast<uint8_t *>(this) + HEADER_SIZE, pts, 0x30);
-        set_pts_int(reinterpret_cast<uint8_t *>(this) + HEADER_SIZE + PTS_SIZE, dts, 0x10);
+        set_pts_int(reinterpret_cast<uint8_t*>(this) + HEADER_SIZE, pts, 0x30);
+        set_pts_int(reinterpret_cast<uint8_t*>(this) + HEADER_SIZE + PTS_SIZE, dts, 0x10);
         flagsLo = flagsLo | 0xc0;
     }
     void serialize(uint8_t streamID);

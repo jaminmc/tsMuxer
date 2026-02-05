@@ -7,7 +7,7 @@
 
 const static int MAX_ERRORS_CNT = 10000;
 
-MuxForm::MuxForm(QWidget *parent) : QDialog(parent, Qt::WindowMaximizeButtonHint), ui(new Ui_muxForm), muxProcess(0)
+MuxForm::MuxForm(QWidget* parent) : QDialog(parent, Qt::WindowMaximizeButtonHint), ui(new Ui_muxForm), muxProcess(0)
 {
     ui->setupUi(this);
     connect(ui->progressBar, &QProgressBar::valueChanged, this, &MuxForm::onProgressChanged);
@@ -15,13 +15,13 @@ MuxForm::MuxForm(QWidget *parent) : QDialog(parent, Qt::WindowMaximizeButtonHint
     connect(ui->okBtn, &QPushButton::clicked, this, &MuxForm::close);
 }
 
-void MuxForm::closeEvent(QCloseEvent *event)
+void MuxForm::closeEvent(QCloseEvent* event)
 {
     onAbort();
     event->accept();
 }
 
-void MuxForm::changeEvent(QEvent *event)
+void MuxForm::changeEvent(QEvent* event)
 {
     if (event->type() == QEvent::LanguageChange)
     {
@@ -30,7 +30,7 @@ void MuxForm::changeEvent(QEvent *event)
     QDialog::changeEvent(event);
 }
 
-void MuxForm::prepare(const QString &label)
+void MuxForm::prepare(const QString& label)
 {
     muxProcess = 0;
     errCnt = 0;
@@ -51,7 +51,7 @@ void MuxForm::onProgressChanged()
 
 void MuxForm::setProgress(int value) { ui->progressBar->setValue(value); }
 
-void MuxForm::addStdOutLine(const QString &line)
+void MuxForm::addStdOutLine(const QString& line)
 {
     ui->stdoutText->append(line);
     QTextCursor c = ui->stdoutText->textCursor();
@@ -59,7 +59,7 @@ void MuxForm::addStdOutLine(const QString &line)
     ui->stdoutText->setTextCursor(c);
 }
 
-void MuxForm::addStdErrLine(const QString &line)
+void MuxForm::addStdErrLine(const QString& line)
 {
     if (errCnt >= MAX_ERRORS_CNT)
         return;
@@ -76,7 +76,7 @@ void MuxForm::addStdErrLine(const QString &line)
     ui->stderrText->setTextCursor(c);
 }
 
-void MuxForm::muxFinished(int exitCode, const QString &)
+void MuxForm::muxFinished(int exitCode, const QString&)
 {
     if (muxProcess && ui->abortBtn->isEnabled())
     {
@@ -103,4 +103,4 @@ void MuxForm::onAbort()
     muxProcess = nullptr;
 }
 
-void MuxForm::setProcess(QProcess *proc) { muxProcess = proc; }
+void MuxForm::setProcess(QProcess* proc) { muxProcess = proc; }

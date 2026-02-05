@@ -13,9 +13,9 @@ QVariant LangCodesModel::QtvLangCode::toVariant(int role) const
     }
 }
 
-int LangCodesModel::rowCount(const QModelIndex &) const { return ROW_COUNT; }
+int LangCodesModel::rowCount(const QModelIndex&) const { return ROW_COUNT; }
 
-QVariant LangCodesModel::data(const QModelIndex &index, int role) const
+QVariant LangCodesModel::data(const QModelIndex& index, int role) const
 {
     if (role != Qt::DisplayRole && role != Qt::UserRole)
     {
@@ -51,7 +51,7 @@ QVariant LangCodesModel::data(const QModelIndex &index, int role) const
     }
 }
 
-Qt::ItemFlags LangCodesModel::flags(const QModelIndex &index) const
+Qt::ItemFlags LangCodesModel::flags(const QModelIndex& index) const
 {
     return (index.row() == COMMON_ROW_IDX || index.row() == ALL_ROW_IDX)
                ? Qt::ItemIsEnabled /* make them unselectable */

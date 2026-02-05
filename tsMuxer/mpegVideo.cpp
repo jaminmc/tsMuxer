@@ -565,8 +565,7 @@ void MPEGSliceHeader::macroblocks(BitStreamReader& reader)
 int MPEGSliceHeader::readMacroblockAddressIncrement(BitStreamReader& reader)
 {
     unsigned cnt = 0;
-    for (; reader.getBit() == 0; cnt++)
-        ;
+    for (; reader.getBit() == 0; cnt++);
     if (cnt > INT_BIT)
         THROW_BITSTREAM_ERR;
     switch (cnt)
