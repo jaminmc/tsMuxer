@@ -1,4 +1,4 @@
-## tsMuxeR 2.6.16
+## tsMuxeR 2.7.1
 - Fixed file dialogs not appearing on macOS with Qt6 by using non-native dialogs
 - Fixed browse button for output folder passing wrong parameter to file dialog
 - Consolidated file type filters in add dialog to reduce dropdown size
