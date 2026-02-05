@@ -3,29 +3,39 @@ name: Build for Mac
 on:
   push:
     branches: [master]
+  pull_request:
+    branches: [master]
 
 jobs:
-  build:
+  build-mac-native:
 
-    runs-on: ubuntu-latest
-    
-    container:
-      image: docker://justdan96/tsmuxer_build:latest
-      volumes:
-      - /workspace:/github/workspace
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+          - os: macos-13
+            arch: x86_64
     
     steps:
     - uses: actions/checkout@v4
       name: checkout
       
-    - run: rm -f bin/.gitkeep
-      name: clean-bin-folder
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.7.*'
+        modules: 'qtmultimedia'
       
-    - run: ./scripts/rebuild_osxcross_docker.sh
+    - run: ./scripts/build_macos_native.sh
       name: build-for-mac
-      
+
+    - name: Rename zip with architecture
+      run: mv build/bin/mac.zip build/bin/mac-${{ matrix.arch }}.zip
+
     - uses: actions/upload-artifact@v4
       with:
-         name: tsMuxer
-         path: bin
+         name: tsMuxer-${{ matrix.arch }}
+         path: build/bin/mac-${{ matrix.arch }}.zip
       name: upload-artefact
