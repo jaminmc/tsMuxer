@@ -14,4 +14,4 @@ jobs:
     - uses: actions/checkout@v4
     - uses: DoozyX/clang-format-lint-action@v0.18
       with:
-        clangFormatVersion: 9
+        clangFormatVersion: 18
