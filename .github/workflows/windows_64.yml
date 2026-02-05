@@ -15,7 +15,7 @@ jobs:
       - /workspace:/github/workspace
     
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v4
       name: checkout
       
     - run: rm -f bin/.gitkeep
@@ -24,7 +24,7 @@ jobs:
     - run: ./scripts/rebuild_mxe_docker.sh
       name: build-for-windows
       
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v4
       with:
          name: tsMuxer
          path: bin

@@ -60,7 +60,7 @@ class VC1Unit
     VC1Unit() : m_nalBuffer(nullptr), m_nalBufferLen(0) {}
     ~VC1Unit() { delete[] m_nalBuffer; }
 
-    static bool isMarker(const uint8_t* ptr) { return ptr[0] == ptr[1] == 0 && ptr[2] == 1; }
+    static bool isMarker(const uint8_t* ptr) { return ptr[0] == 0 && ptr[1] == 0 && ptr[2] == 1; }
 
     static uint8_t* findNextMarker(uint8_t* buffer, uint8_t* end)
     {

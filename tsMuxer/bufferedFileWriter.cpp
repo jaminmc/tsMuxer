@@ -59,7 +59,7 @@ void BufferedFileWriter::thread_main()
         }
         catch (...)
         {
-            m_lastErrorStr = "Unknown expcetion";
+            m_lastErrorStr = "Unknown exception";
             m_lastErrorCode = -1;
             LTRACE(LT_ERROR, 0, "BufferedFileWriter::thread_main() throws unknown exception");
         }

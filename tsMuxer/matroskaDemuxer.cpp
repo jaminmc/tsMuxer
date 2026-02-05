@@ -701,6 +701,7 @@ int MatroskaDemuxer::matroska_parse_block(uint8_t *data, int size, const int64_t
                 if (curPtr_size < 0 || slice_size + offset < 0 || curPtr_size < slice_size + offset)
                 {
                     LTRACE(LT_ERROR, 0, "invalid slice size");
+                    delete pkt;
                     delete[] origdata;
                     delete[] lace_size;
                     return res;
@@ -1186,7 +1187,7 @@ int MatroskaDemuxer::readPacket(AVPacket &avPacket)
         memcpy(&avPacket, newPacket, sizeof(AVPacket));
     }
     else
-        avPacket = *new AVPacket();
+        avPacket = AVPacket();
     m_lastDeliveryPacket = newPacket;
     return 0;
 }
