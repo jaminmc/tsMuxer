@@ -13,7 +13,7 @@ The following sections outline how to build tsMuxer and tsMuxerGUI for your chos
 
 ## Docker (All Platforms)
 
-You can use our [Docker container](https://github.com/justdan96/tsmuxer_build) to build tsMuxer for your chosen platform. To build the GUI you will need to follow the instructions specifically for your platform.
+You can use the [Docker container](https://github.com/justdan96/tsmuxer_build) from the original project to build tsMuxer for your chosen platform. Note: The Docker container may need updates for C++20/Qt6 support. To build the GUI you will need to follow the instructions specifically for your platform.
 
 To create the builds using the Docker container, follow the steps below:
 
@@ -256,7 +256,7 @@ echo 'QMAKE_LIBS_VULKAN       =' >> $MINGW_PREFIX/qt5-static/share/qt5/mkspecs/c
 Download tsMuxer repo and browse to the it location by run:
 ```
 cd ~
-git clone https://github.com/justdan96/tsMuxer.git
+git clone https://github.com/jaminmc/tsMuxer.git
 cd tsMuxer
 ```
 Compile tsMuxer by run:

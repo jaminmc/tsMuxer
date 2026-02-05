@@ -2,7 +2,7 @@
 
 The following executables are created to be portable, so you can just save and extract the compressed package for your platform. 
 
-Nightly builds are created by GitHub Actions and stored as [releases](https://github.com/justdan96/tsMuxer/releases). Please visit the releases page in order to download the release you're interested in.
+Nightly builds are created by GitHub Actions and stored as [releases](https://github.com/jaminmc/tsMuxer/releases). Please visit the releases page in order to download the release you're interested in.
 
 ## Windows
 
@@ -12,7 +12,9 @@ The ZIP file for Windows can just be unzipped and the executables can be used st
 
 The ZIP file for Linux can just be unzipped and the executables can be used straight away - there are no dependencies.
 
-The following are packages created specifically for each distribution. To update, please uninstall the package and then install it again.
+The following are packages created specifically for each distribution from the original project. These package repositories may be outdated. For the latest builds, please use the GitHub releases above or build from source.
+
+To update, please uninstall the package and then install it again.
 
 ### Mageia Cauldron
 ```

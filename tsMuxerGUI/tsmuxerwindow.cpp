@@ -2687,7 +2687,7 @@ bool TsMuxerWindow::eventFilter(QObject *obj, QEvent *event)
 {
     if (obj == ui->label_Donate && event->type() == QEvent::MouseButtonPress)
     {
-        QDesktopServices::openUrl(QUrl("https://github.com/justdan96/tsMuxer"));
+        QDesktopServices::openUrl(QUrl("https://github.com/jaminmc/tsMuxer"));
         return true;
     }
     else
