@@ -8,7 +8,7 @@ if [ "$MSYSTEM" == "MSYS" ] ; then
  zlib-devel \
  git
  if [ ! -d tsmuxer ] ; then
-  git clone https://github.com/justdan96/tsMuxer.git
+  git clone https://github.com/jaminmc/tsMuxer.git
  fi
 else
  cd tsmuxer
@@ -17,24 +17,16 @@ else
   $MINGW_PACKAGE_PREFIX-cmake \
   $MINGW_PACKAGE_PREFIX-freetype \
   $MINGW_PACKAGE_PREFIX-zlib \
-  $MINGW_PACKAGE_PREFIX-ninja
-  if [ ! -d $MINGW_PREFIX/qt5-static ] ; then
-   echo If you intend to build the tsMuxerGUI enter Y
-   pacman -S --needed $MINGW_PACKAGE_PREFIX-qt5-static
-  fi
-  if [ -d $MINGW_PREFIX/qt5-static ] ; then
-   echo 'load(win32/windows_vulkan_sdk)' > $MINGW_PREFIX/qt5-static/share/qt5/mkspecs/common/windows-vulkan.conf
-   echo 'QMAKE_LIBS_VULKAN       =' >>     $MINGW_PREFIX/qt5-static/share/qt5/mkspecs/common/windows-vulkan.conf
-  fi
+  $MINGW_PACKAGE_PREFIX-ninja \
+  $MINGW_PACKAGE_PREFIX-qt6-static
   mkdir build
  fi
  git pull
  cd build
- cmake ../ -G Ninja -DTSMUXER_STATIC_BUILD=true
+ cmake ../ -G Ninja -DTSMUXER_STATIC_BUILD=true -DTSMUXER_GUI=ON
  ninja && cp -u tsMuxer/tsmuxer.exe ../bin/
- if [ -d $MINGW_PREFIX/qt5-static ] ; then
-  $MINGW_PREFIX/qt5-static/bin/qmake ../tsMuxerGUI
-  make release && cp -u release/tsMuxerGUI.exe ../bin/
+ if [ -f tsMuxerGUI/tsMuxerGUI.exe ] ; then
+  cp -u tsMuxerGUI/tsMuxerGUI.exe ../bin/
  fi
  cd ..
 fi

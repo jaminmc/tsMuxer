@@ -6,13 +6,10 @@ cd build
 export CCACHE_DISABLE=1
 export MXE_USE_CCACHE=
 
-i686-w64-mingw32.static-cmake ../
+i686-w64-mingw32.static-cmake ../ -DTSMUXER_GUI=ON
 make
 mv tsMuxer/tsmuxer.exe ../bin/w32/tsMuxeR.exe
-
-i686-w64-mingw32.static-qmake-qt5 ../tsMuxerGUI
-make
-mv ./tsMuxerGUI.exe ../bin/w32/tsMuxerGUI.exe
+mv tsMuxerGUI/tsMuxerGUI.exe ../bin/w32/tsMuxerGUI.exe
 cd ..
 rm -rf build
 zip -jr ./bin/w32.zip ./bin/w32

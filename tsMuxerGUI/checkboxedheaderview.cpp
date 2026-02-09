@@ -29,11 +29,7 @@ void QnCheckBoxedHeaderView::paintSection(QPainter* painter, const QRect& rect, 
         if (!rect.isValid())
             return;
         QStyleOptionButton opt;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        opt.initFrom(this);  // initFrom is still available in Qt6, but state-init differs
-#else
         opt.initFrom(this);
-#endif
 
         QStyle::State state = QStyle::State_Raised;
         if (isEnabled())

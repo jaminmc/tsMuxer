@@ -9,41 +9,41 @@ The following sections outline how to build tsMuxer and tsMuxerGUI for your chos
   - GCC 10 or later
   - Clang 11 or later
   - MSVC 2019 or later
-- **Qt**: Qt6 (recommended) or Qt5 for the GUI component
+- **Qt**: Qt6 for the GUI component
 
 ## Docker (All Platforms)
 
-You can use the [Docker container](https://github.com/justdan96/tsmuxer_build) from the original project to build tsMuxer for your chosen platform. Note: The Docker container may need updates for C++20/Qt6 support. To build the GUI you will need to follow the instructions specifically for your platform.
+You can use the [Docker container](https://github.com/jaminmc/tsmuxer_build) to build tsMuxer for your chosen platform. To build the GUI you will need to follow the instructions specifically for your platform.
 
 To create the builds using the Docker container, follow the steps below:
 
-1. Pull `justdan96/tsmuxer_build` from the Docker repository:
+1. Pull `jaminmc/tsmuxer_build` from the Docker repository:
 ```
-docker pull justdan96/tsmuxer_build
+docker pull jaminmc/tsmuxer_build
 ```
 
-Or build `justdan96/tsmuxer_build` from source:
+Or build `jaminmc/tsmuxer_build` from source:
 ```
-git clone https://github.com/justdan96/tsmuxer_build.git
+git clone https://github.com/jaminmc/tsmuxer_build.git
 cd tsmuxer_build
-docker build -t justdan96/tsmuxer_build .
+docker build -t jaminmc/tsmuxer_build .
 ```
 
 2. Browse to the tsMuxer repository and run one of the following commands:
 
 *Linux*
 ```
-docker run -it --rm -v $(pwd):/workdir -w="/workdir" justdan96/tsmuxer_build bash -c ". scripts/rebuild_linux_docker.sh"
+docker run -it --rm -v $(pwd):/workdir -w="/workdir" jaminmc/tsmuxer_build bash -c ". scripts/rebuild_linux_docker.sh"
 ```
 
 *Windows*
 ```
-docker run -it --rm -v $(pwd):/workdir -w="/workdir" justdan96/tsmuxer_build bash -c ". scripts/rebuild_mxe_docker.sh"
+docker run -it --rm -v $(pwd):/workdir -w="/workdir" jaminmc/tsmuxer_build bash -c ". scripts/rebuild_mxe_docker.sh"
 ```
 
 *OSX*
 ```
-docker run -it --rm -v $(pwd):/workdir -w="/workdir" justdan96/tsmuxer_build bash -c ". scripts/rebuild_osxcross_docker.sh"
+docker run -it --rm -v $(pwd):/workdir -w="/workdir" jaminmc/tsmuxer_build bash -c ". scripts/rebuild_osxcross_docker.sh"
 ```
 
 The executable binary will be saved to the "\bin" folder.
@@ -85,9 +85,7 @@ libfreetype6-dev \
 zlib1g-dev \
 ```
 
-If you also intend to build the GUI then you require Qt6 (recommended) or Qt5:
-
-Qt6 (recommended):
+If you also intend to build the GUI then you require Qt6:
 ```
 sudo apt-get install qt6-base-dev \
 qt6-tools-dev \
@@ -95,20 +93,6 @@ qt6-tools-dev-tools \
 qt6-l10n-tools \
 qt6-multimedia-dev \
 libqt6multimedia6
-```
-
-Or Qt5 (legacy):
-```
-sudo apt-get install qt5-default \
-qt5-qmake \
-qtbase5-dev \
-qtdeclarative5-dev \
-qtmultimedia5-dev \
-libqt5multimediawidgets5 \
-libqt5multimedia5-plugins \
-libqt5multimedia5 \
-qttools5-dev \
-qttools5-dev-tools
 ```
 
 With all the dependencies set up we can now actually compile the code.
@@ -194,9 +178,9 @@ sudo ln -s /usr/lib/mxe/usr/bin/x86_64-w64-mingw32.static-g++ /usr/lib/mxe/usr/x
 sudo ln -s /usr/lib/mxe/usr/bin/x86_64-w64-mingw32.static-gcc /usr/lib/mxe/usr/x86_64-pc-linux-gnu/bin/gcc
 ```
 
-If you want to compile the GUI as well you also need to install the below (please note Qt5 takes up a LOT of disk space!):
+If you want to compile the GUI as well you also need to install Qt6 for MXE:
 ```
-sudo apt-get install -y mxe-x86-64-w64-mingw32.static-qt5
+sudo apt-get install -y mxe-x86-64-w64-mingw32.static-qt6
 ```
 
 With all the dependencies set up we can now actually compile the code.
@@ -242,31 +226,19 @@ $MINGW_PACKAGE_PREFIX-zlib \
 $MINGW_PACKAGE_PREFIX-ninja
 ```
 
-If you intend to build the GUI as well you need to also install these, depending on your platform (please note Qt5 takes up a LOT of disk space!):
+If you intend to build the GUI as well you need to also install Qt6:
 ```
-pacman -Sy --needed $MINGW_PACKAGE_PREFIX-qt5-static
-```
-
-Before we compile anything we have to alter a file to work around [this bug](https://bugreports.qt.io/browse/QTBUG-76660). Run the following commands to fix that:
-```
-echo 'load(win32/windows_vulkan_sdk)' > $MINGW_PREFIX/qt5-static/share/qt5/mkspecs/common/windows-vulkan.conf
-echo 'QMAKE_LIBS_VULKAN       =' >> $MINGW_PREFIX/qt5-static/share/qt5/mkspecs/common/windows-vulkan.conf
+pacman -Sy --needed $MINGW_PACKAGE_PREFIX-qt6-static
 ```
 
-Download tsMuxer repo and browse to the it location by run:
+Download tsMuxer repo and browse to its location:
 ```
 cd ~
 git clone https://github.com/jaminmc/tsMuxer.git
 cd tsMuxer
 ```
-Compile tsMuxer by run:
-```
-./scripts/rebuild_linux.sh
-```
 
-This will create in tsMuxer/bin statically compiled versions of tsMuxer - so no external DLL files are required.
-
-Or just run:
+Then run:
 ```
 ./scripts/rebuild_msys2.sh
 ```

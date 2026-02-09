@@ -5,18 +5,13 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-set(QT_VERSION 6 CACHE STRING "Qt version to use")
-set_property(CACHE QT_VERSION PROPERTY STRINGS 5 6)
-
-set(qt_ver_pfx "Qt${QT_VERSION}")
-
-find_package(${qt_ver_pfx}
+find_package(Qt6
   REQUIRED COMPONENTS Widgets LinguistTools
   OPTIONAL_COMPONENTS Multimedia)
-set(tsmuxer_gui_libs ${qt_ver_pfx}::Widgets)
+set(tsmuxer_gui_libs Qt6::Widgets)
 
-if(${${qt_ver_pfx}Multimedia_FOUND})
-  list(APPEND tsmuxer_gui_libs ${qt_ver_pfx}::Multimedia)
+if(Qt6Multimedia_FOUND)
+  list(APPEND tsmuxer_gui_libs Qt6::Multimedia)
 endif()
 
 set(tsmuxer_ts_files
@@ -32,16 +27,7 @@ set(tsmuxer_ts_files
 set(lang_qrc "translations.qrc")
 configure_file(${lang_qrc} ${lang_qrc} COPYONLY)
 
-if(${QT_VERSION} EQUAL 5)
-  # create_translation is not used due to QTBUG-41736
-  qt5_add_translation(QM_FILES ${tsmuxer_ts_files})
-elseif(${QT_VERSION} EQUAL 6)
-  # should use qt6_add_translations once Qt6 is the only supported version.
-  # this will also make ${lang_qrc} and all QM_FILES shenanigans unnecessary as
-  # that command turns the compiled qrcs into resources automatically, and adds
-  # them to the target's sources so they're embedded in the final binary.
-  qt6_add_translation(QM_FILES ${tsmuxer_ts_files})
-endif()
+qt6_add_translation(QM_FILES ${tsmuxer_ts_files})
 
 set(tsmuxer_gui_sources
   main.cpp

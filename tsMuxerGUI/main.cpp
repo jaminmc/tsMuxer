@@ -13,11 +13,7 @@ int main(int argc, char* argv[])
     QList<QUrl> files;
     for (int i = 1; i < argc; ++i)
     {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         files << QUrl::fromLocalFile(QString::fromUtf8(argv[i]));
-#else
-        files << QUrl::fromLocalFile(QString::fromLocal8Bit(argv[i]));
-#endif
     }
     if (!files.isEmpty())
         win.addFiles(files);

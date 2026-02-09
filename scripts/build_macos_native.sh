@@ -7,17 +7,12 @@ export MACOSX_DEPLOYMENT_TARGET=10.15
 
 brew install freetype
 
-# use Qt6 by default but try to query from environment
-if ! qtver=$(qmake -query QT_VERSION | cut -d'.' -f1); then
-  qtver=6
-fi
-
 mkdir build
 
 pushd build
 cmake -DCMAKE_BUILD_TYPE=Release -DTSMUXER_STATIC_BUILD=TRUE \
   "-DFREETYPE_LDFLAGS=bz2;$(brew --prefix)/lib/libpng.a" -DTSMUXER_GUI=TRUE \
-  -DWITHOUT_PKGCONFIG=TRUE -DQT_VERSION=$qtver ..
+  -DWITHOUT_PKGCONFIG=TRUE ..
 
 if ! num_cores=$(sysctl -n hw.logicalcpu); then
   num_cores=1

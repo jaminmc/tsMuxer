@@ -29,21 +29,13 @@ jobs:
     - name: create-release
       id: create
       if: steps.check.outputs.status == 0
-      uses: justdan96/release-action@main
+      uses: softprops/action-gh-release@v2
       with:
-        tag: nightly-${{ steps.check.outputs.version }}
+        tag_name: nightly-${{ steps.check.outputs.version }}
         name: Nightly build from ${{ steps.check.outputs.version }}
         prerelease: true
-        commit: ${{ env.GITHUB_SHA }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: obs-trigger
-      id: obs
-      if: steps.check.outputs.status == 0
-      run: ./.github/workflows/obs_trigger.sh
       env:
-        OBS_USER: justdan96
-        OBS_SECRET: ${{ secrets.OBS_SECRET }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
   build-docker:
   
@@ -54,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     
     container:
-      image: docker://justdan96/tsmuxer_build:latest
+      image: docker://jaminmc/tsmuxer_build:latest
       volumes:
       - /workspace:/github/workspace
     
@@ -74,46 +66,14 @@ jobs:
     - run: ./scripts/rebuild_mxe32_with_gui_docker.sh
       name: build-for-win32
 
-    - name: Upload Win32/Win64/Linux Builds
-      id: upload-builds
-      uses: justdan96/release-action@main
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        artifacts: ./bin/*.zip
-        tag: nightly-${{ needs.check.outputs.version }}
-        allowUpdates: true
-        omitPrereleaseDuringUpdate: true
-        omitNameDuringUpdate: true
-        omitBodyDuringUpdate: true 
-
-  build-macos:
-  
-    needs: check
-    if: needs.check.outputs.status == 0
-    
-    runs-on: macos-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-      name: checkout
-    
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: '6.7.*'
-        modules: 'qtmultimedia'
-      
-    - run: ./scripts/build_macos_native.sh
+    - run: ./scripts/rebuild_osxcross_docker.sh
       name: build-for-mac
-    
-    - name: Upload Mac Build
-      id: upload-mac
-      uses: justdan96/release-action@main
+
+    - name: Upload All Builds
+      id: upload-builds
+      uses: softprops/action-gh-release@v2
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        artifacts: ./build/bin/mac.zip
-        tag: nightly-${{ needs.check.outputs.version }}
-        allowUpdates: true
-        omitPrereleaseDuringUpdate: true
-        omitNameDuringUpdate: true
-        omitBodyDuringUpdate: true        
+        files: ./bin/*.zip
+        tag_name: nightly-${{ needs.check.outputs.version }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        

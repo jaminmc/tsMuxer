@@ -23,48 +23,25 @@
 #include "lang_codes.h"
 #include "muxForm.h"
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-#define setTabStopDistance setTabStopWidth
-#endif
-
 // On macOS with Qt 6, native file dialogs can fail silently in some cases.
 // Use Qt's built-in dialogs as a workaround.
-#if defined(Q_OS_MACOS) && QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#if defined(Q_OS_MACOS)
 static constexpr auto kFileDialogOptions = QFileDialog::DontUseNativeDialog;
 #else
 static constexpr auto kFileDialogOptions = QFileDialog::Options();
 #endif
 
-// Qt5/Qt6 compatibility helpers for deprecated QString methods
 namespace QtCompat
 {
-inline QString strLeft(const QString& str, qsizetype n)
-{
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    return str.first(n);
-#else
-    return str.left(n);
-#endif
-}
+inline QString strLeft(const QString& str, qsizetype n) { return str.first(n); }
 
-inline QString strRight(const QString& str, qsizetype n)
-{
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    return str.last(n);
-#else
-    return str.right(n);
-#endif
-}
+inline QString strRight(const QString& str, qsizetype n) { return str.last(n); }
 
 inline QString strMid(const QString& str, qsizetype pos, qsizetype len = -1)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     if (len < 0)
         return str.sliced(pos);
     return str.sliced(pos, len);
-#else
-    return str.mid(pos, len);
-#endif
 }
 }  // namespace QtCompat
 
@@ -376,9 +353,6 @@ TsMuxerWindow::TsMuxerWindow()
     {
         delete settings;
         settings = new QSettings(iniName, QSettings::IniFormat);
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        settings->setIniCodec("UTF-8");
-#endif
         if (!readSettings())
             writeSettings();  // copy current registry settings to the ini file
     }
@@ -675,7 +649,7 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
     }
     if (fileDuration == 0 && !mplsFileList.isEmpty())
     {
-        foreach (const MPLSFileInfo& mplsFile, mplsFileList) fileDuration += mplsFile.duration;
+        for (const MPLSFileInfo& mplsFile : mplsFileList) fileDuration += mplsFile.duration;
     }
 
     m_updateMeta = true;
@@ -1355,7 +1329,7 @@ void TsMuxerWindow::updateCustomChapters()
             offset = 0;
 
         ChapterList chapters = item->data(ChaptersRole).value<ChapterList>();
-        foreach (double chapter, chapters) chaptersSet << qint64((chapter + offset) * 1000000);
+        for (double chapter : chapters) chaptersSet << qint64((chapter + offset) * 1000000);
         prevDuration = item->data(FileDurationRole).toDouble();
     }
     ui->memoChapters->clear();

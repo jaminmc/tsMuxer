@@ -564,7 +564,7 @@ int main(int argc, char** argv)
     }
     argv = argv_vec.data();
 #endif
-    LTRACE(LT_INFO, 2, "tsMuxeR version " TSMUXER_VERSION << ". github.com/justdan96/tsMuxer");
+    LTRACE(LT_INFO, 2, "tsMuxeR version " TSMUXER_VERSION << ". github.com/jaminmc/tsMuxer");
     int firstMplsOffset = 0;
     int firstM2tsOffset = 0;
     int blankNum = 1900;
