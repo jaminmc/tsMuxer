@@ -5,7 +5,7 @@ export PATH=/usr/lib/mxe/usr/bin:$PATH
 unset LD_LIBRARY_PATH
 rm -rf build
 mkdir build
-mkdir ./bin/w64
+mkdir -p ./bin/w64
 cd build || exit
 export CCACHE_DISABLE=1
 export MXE_USE_CCACHE=

@@ -5,6 +5,7 @@ mkdir build
 cd build || exit
 cmake -DTSMUXER_GUI=ON -DTSMUXER_STATIC_BUILD=ON -DFREETYPE_LDFLAGS="bz2;brotlidec;brotlicommon;png" ../
 make
+mkdir -p ../bin
 cp tsMuxer/tsmuxer ../bin/tsMuxeR
 cp tsMuxerGUI/tsMuxerGUI ../bin/tsMuxerGUI
 cd .. || exit

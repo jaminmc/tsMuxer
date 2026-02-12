@@ -24,7 +24,7 @@ else
  git pull
  cd build || exit
  cmake ../ -G Ninja -DTSMUXER_STATIC_BUILD=true -DTSMUXER_GUI=ON
- ninja && cp -u tsMuxer/tsmuxer.exe ../bin/
+ ninja && mkdir -p ../bin && cp -u tsMuxer/tsmuxer.exe ../bin/
  if [ -f tsMuxerGUI/tsMuxerGUI.exe ] ; then
   cp -u tsMuxerGUI/tsMuxerGUI.exe ../bin/
  fi

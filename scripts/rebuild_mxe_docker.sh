@@ -7,6 +7,7 @@ export CCACHE_DISABLE=1
 export MXE_USE_CCACHE=
 x86_64-w64-mingw32.static-cmake ../
 make
+mkdir -p ../bin
 cp tsMuxer/tsmuxer.exe ../bin/tsMuxeR.exe
 cd .. || exit
 rm -rf build
