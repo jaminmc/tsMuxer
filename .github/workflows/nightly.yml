@@ -89,7 +89,7 @@ jobs:
         docker run --rm
         -v ${{ github.workspace }}:/work -w /work
         jaminmc/tsmuxer_build:latest
-        ./scripts/rebuild_osxcross_docker.sh
+        ./scripts/rebuild_osxcross_with_gui_docker.sh
 
     - name: Upload All Builds
       id: upload-builds

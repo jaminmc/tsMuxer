@@ -32,7 +32,7 @@ jobs:
         docker run --rm
         -v ${{ github.workspace }}:/work -w /work
         jaminmc/tsmuxer_build:latest
-        ./scripts/rebuild_linux_docker.sh
+        ./scripts/rebuild_linux_with_gui_docker.sh
       
     - uses: actions/upload-artifact@v4
       with:
