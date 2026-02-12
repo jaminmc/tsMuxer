@@ -1,13 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
 rm -rf build
 mkdir build
-cd build
-cmake  -DTSMUXER_GUI=ON -DTSMUXER_STATIC_BUILD=ON -DFREETYPE_LDFLAGS=png ../
+cd build || exit
+cmake -DTSMUXER_GUI=ON -DTSMUXER_STATIC_BUILD=ON -DFREETYPE_LDFLAGS="bz2;brotlidec;brotlicommon;png" ../
 make
 cp tsMuxer/tsmuxer ../bin/tsMuxeR
 cp tsMuxerGUI/tsMuxerGUI ../bin/tsMuxerGUI
-cd ..
+cd .. || exit
 rm -rf build
-mkdir ./bin/lnx
+rm -rf ./bin/lnx
+mkdir -p ./bin/lnx
 mv ./bin/tsMuxeR ./bin/lnx/tsMuxeR
 
 # create AppImage of the GUI
@@ -33,13 +36,13 @@ Categories=AudioVideo;
 StartupNotify=true
 EOF
 
-cd ./bin/lnx
+cd ./bin/lnx || exit
 
 APPIMAGE_EXTRACT_AND_RUN=1 /usr/local/bin/linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
 
-cd ../..
+cd ../.. || exit
 
 rm -rf ./bin/lnx/AppDir
 
 zip -r ./bin/lnx.zip ./bin/lnx
-ls ./bin/lnx/tsMuxeR && ls ./bin/lnx/tsMuxerGUI-*-x86_64.AppImage && ls ./bin/lnx.zip
+ls ./bin/lnx/tsMuxeR && ls ./bin/lnx/tsMuxerGUI*x86_64.AppImage && ls ./bin/lnx.zip

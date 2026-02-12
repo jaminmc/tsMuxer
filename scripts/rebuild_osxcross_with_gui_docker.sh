@@ -1,107 +1,191 @@
 #!/usr/bin/env bash
+#
+# Build universal (arm64 + x86_64) macOS CLI + GUI binaries using osxcross.
+# Designed to run inside the jaminmc/tsmuxer_build Docker container.
+#
+# Qt6 for macOS is installed via aqtinstall and is already universal.
+# Freetype is built as a universal static library inside the Docker image.
+#
 
 set -e
 set -x
 set -o pipefail
 
-readonly OSXCROSS_SYSROOT=/usr/lib/osxcross/macports/pkgs
+export PATH=/usr/lib/osxcross/bin:$PATH
 
-OSXCROSS_WRAPPER=$(ls -1 /usr/lib/osxcross/bin/x86_64-apple-darwin*-wrapper | xargs basename)
-OSXCROSS_TRIPLE="${OSXCROSS_WRAPPER/-wrapper/}" 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/osxcross_common.sh"
 
-gui_lib_copy() {
-  local dep_lib=${1##@rpath/}
-  mkdir -p "$(dirname libs/${dep_lib})"
-  cp "${OSXCROSS_SYSROOT}/opt/local/lib/${dep_lib}" "libs/${dep_lib}"
-}
+# QT_MAC_X64 is set by the Docker image's ENV; fall back to default path
+readonly QT_MAC=${QT_MAC_X64:-/opt/qt-mac/6.8.2/macos}
+# Host (Linux) Qt is needed for moc/uic/rcc during cross-compilation
+readonly QT_HOST=${QT_HOST_PATH:-/opt/qt/6.8.2/gcc_64}
 
-osxcross_lib_copy_change_path() {
-  local dep_lib=$1
-  local dep_lib_actual_path="${OSXCROSS_SYSROOT}${dep_lib}"
-  local bin_path=$2
-  local lib_fname=${dep_lib##*/}
-  local lib_path_declared=${dep_lib##${OSXCROSS_SYSROOT}/}
-  local target_lib_fname="../bin/${lib_fname}"
+ARM64_CMAKE=$(find_tool arm64 cmake)
+X86_64_CMAKE=$(find_tool x86_64 cmake)
+LIPO=$(find_tool x86_64 lipo)
+OTOOL=$(find_tool x86_64 otool)
+INSTALL_NAME_TOOL=$(find_tool x86_64 install_name_tool)
 
-  $OSXCROSS_TRIPLE-install_name_tool -change "$lib_path_declared" "@executable_path/${lib_fname}" "$bin_path"
+# ---------------------------------------------------------------------------
+# Create a wrapper toolchain that includes osxcross + adds Qt to search paths.
+# The osxcross toolchain sets CMAKE_FIND_ROOT_PATH_MODE_PACKAGE to ONLY,
+# which blocks find_package from locating Qt outside the SDK sysroot.
+# By appending QT_MAC to CMAKE_FIND_ROOT_PATH *after* the osxcross toolchain
+# runs, all Qt6 sub-packages (Widgets, Core, Gui, etc.) become findable.
+# ---------------------------------------------------------------------------
+TOOLCHAIN_WRAPPER=$(mktemp /tmp/toolchain-qt-XXXXXX.cmake)
+cat > "$TOOLCHAIN_WRAPPER" << EOF
+include(${OSXCROSS_ROOT}/toolchain.cmake)
+list(APPEND CMAKE_FIND_ROOT_PATH "${QT_MAC}")
+EOF
+trap 'rm -f "$TOOLCHAIN_WRAPPER"' EXIT
 
-  [[ -e $target_lib_fname ]] && return
-  cp "$dep_lib_actual_path" "$target_lib_fname"
-  for_each_dep_lib "$target_lib_fname" '/opt/local/lib/' osxcross_lib_copy_change_path
-}
+# ---------------------------------------------------------------------------
+# Common CMake arguments (both CLI and GUI)
+# ---------------------------------------------------------------------------
+CMAKE_COMMON_ARGS=(
+  -DTSMUXER_STATIC_BUILD=ON
+  -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_WRAPPER}"
+  -DTSMUXER_GUI=ON
+  -DWITHOUT_PKGCONFIG=TRUE
+  -DFREETYPE_LIBRARY="${FREETYPE_PREFIX}/lib/libfreetype.a"
+  -DFREETYPE_INCLUDE_DIRS="${FREETYPE_PREFIX}/include"
+  -DCMAKE_PREFIX_PATH="${QT_MAC}"
+  -DQT_HOST_PATH="${QT_HOST}"
+)
 
-tsmuxer_lib_copy_change_path() {
-  local dep_lib=$1
-  local bin_path=$2
-  local lib_fname=${dep_lib##*/}
-  local dep_lib_actual_path="${OSXCROSS_SYSROOT}${dep_lib}"
-  local target_lib_path="../bin/${lib_fname}"
-  cp "$dep_lib_actual_path" "$target_lib_path"
-  $OSXCROSS_TRIPLE-install_name_tool -change "$dep_lib" "@executable_path/${lib_fname}" "$bin_path"
-  for_each_dep_lib "$target_lib_path" '/opt/local/lib/' osxcross_lib_copy_change_path
-}
+# ---------------------------------------------------------------------------
+# Build for arm64
+# ---------------------------------------------------------------------------
+rm -rf build-arm64 build-x86_64
+mkdir build-arm64
+cd build-arm64 || exit
+"$ARM64_CMAKE" ../ "${CMAKE_COMMON_ARGS[@]}"
+make -j"$(nproc)"
+cd .. || exit
 
-for_each_dep_lib() {
-  local bin_path=$1
-  local wanted_pfx=$2
-  local cbk=$3
-  local declared_path=${bin_path##${OSXCROSS_SYSROOT}}
-  for dep_lib in $($OSXCROSS_TRIPLE-otool -L "$bin_path" | awk '/^\t/ { print $1 }' | sort -u); do
-    if [[ $dep_lib != $bin_path && $dep_lib != $declared_path && $dep_lib =~ ^${wanted_pfx} ]]; then
-      "$cbk" "$dep_lib" "$bin_path"
+# ---------------------------------------------------------------------------
+# Build for x86_64
+# ---------------------------------------------------------------------------
+mkdir build-x86_64
+cd build-x86_64 || exit
+"$X86_64_CMAKE" ../ "${CMAKE_COMMON_ARGS[@]}"
+make -j"$(nproc)"
+cd .. || exit
+
+# ---------------------------------------------------------------------------
+# Assemble universal app bundle
+# ---------------------------------------------------------------------------
+# Use arm64 build as the base (directory structure is identical)
+rm -rf bin/mac bin/mac.zip
+mkdir -p bin/mac
+cp -r build-arm64/tsMuxerGUI/tsMuxerGUI.app bin/mac/tsMuxerGUI.app
+
+# Create universal CLI binary
+"$LIPO" -create \
+  build-arm64/tsMuxer/tsmuxer \
+  build-x86_64/tsMuxer/tsmuxer \
+  -output bin/mac/tsMuxeR
+
+# Create universal GUI binary
+"$LIPO" -create \
+  build-arm64/tsMuxerGUI/tsMuxerGUI.app/Contents/MacOS/tsMuxerGUI \
+  build-x86_64/tsMuxerGUI/tsMuxerGUI.app/Contents/MacOS/tsMuxerGUI \
+  -output bin/mac/tsMuxerGUI.app/Contents/MacOS/tsMuxerGUI
+
+# Embed the universal CLI binary inside the app bundle
+cp bin/mac/tsMuxeR bin/mac/tsMuxerGUI.app/Contents/MacOS/tsMuxeR
+
+# ---------------------------------------------------------------------------
+# Bundle Qt frameworks into the .app
+# ---------------------------------------------------------------------------
+FRAMEWORKS_DIR=bin/mac/tsMuxerGUI.app/Contents/Frameworks
+mkdir -p "$FRAMEWORKS_DIR"
+
+# Add rpath so the GUI binary can find bundled frameworks
+"$INSTALL_NAME_TOOL" -add_rpath @executable_path/../Frameworks \
+  bin/mac/tsMuxerGUI.app/Contents/MacOS/tsMuxerGUI
+
+# Copy Qt frameworks referenced by the GUI binary
+copy_needed_frameworks() {
+  local binary=$1
+  for fw_ref in $("$OTOOL" -L "$binary" | awk '/@rpath\/.*\.framework/ { print $1 }'); do
+    local fw_name
+    fw_name=$(echo "$fw_ref" | sed 's|@rpath/||' | cut -d'/' -f1)
+    if [ -d "${QT_MAC}/lib/${fw_name}" ] && [ ! -d "${FRAMEWORKS_DIR}/${fw_name}" ]; then
+      echo "Bundling framework: ${fw_name}"
+      cp -a "${QT_MAC}/lib/${fw_name}" "${FRAMEWORKS_DIR}/${fw_name}"
     fi
   done
 }
 
-export PATH=/usr/lib/osxcross/bin:$PATH
-export MACOSX_DEPLOYMENT_TARGET=10.15
-export PKG_CONFIG=/usr/lib/osxcross/bin/$OSXCROSS_TRIPLE-pkg-config
-export OSXCROSS_MP_INC=1
-export LD_LIBRARY_PATH=/usr/lib/osxcross/lib:$LD_LIBRARY_PATH:/usr/lib/osxcross/macports/pkgs/opt/local/lib/
+# Scan the main binary first
+copy_needed_frameworks bin/mac/tsMuxerGUI.app/Contents/MacOS/tsMuxerGUI
 
-rm -rf build
-mkdir build
-cd build
-$OSXCROSS_TRIPLE-cmake ../  -DTSMUXER_STATIC_BUILD=ON  -DCMAKE_TOOLCHAIN_FILE=/usr/lib/osxcross/toolchain.cmake -DTSMUXER_GUI=ON
-make
+# ---------------------------------------------------------------------------
+# Bundle the cocoa platform plugin
+# ---------------------------------------------------------------------------
+mkdir -p bin/mac/tsMuxerGUI.app/Contents/plugins/platforms
+cp "${QT_MAC}/plugins/platforms/libqcocoa.dylib" \
+  bin/mac/tsMuxerGUI.app/Contents/plugins/platforms/
 
-cp -r tsMuxerGUI/tsMuxerGUI.app ../bin/tsMuxerGUI.app
-mkdir ../bin/tsMuxerGUI.app/Contents/libs 2>/dev/null || :
-# copy libs needed by the real binary and fixup its library paths
-for_each_dep_lib tsMuxer/tsmuxer '/opt/local/lib/' tsmuxer_lib_copy_change_path
-cp tsMuxer/tsmuxer ../bin/tsMuxeR
-cp tsMuxer/tsmuxer ../bin/tsMuxerGUI.app/Contents/MacOS/tsMuxeR
-cp -t ../bin/tsMuxerGUI.app/Contents/MacOS/ ../bin/*.dylib 2>/dev/null || :
-cd ..
+# Add rpath so the cocoa plugin can find bundled frameworks
+"$INSTALL_NAME_TOOL" -add_rpath @loader_path/../../Frameworks \
+  bin/mac/tsMuxerGUI.app/Contents/plugins/platforms/libqcocoa.dylib
 
-pushd bin/tsMuxerGUI.app/Contents
+# Scan cocoa plugin for additional framework dependencies
+copy_needed_frameworks bin/mac/tsMuxerGUI.app/Contents/plugins/platforms/libqcocoa.dylib
 
-# tell the GUI binary to look for libs in the packaged libs directory
-$OSXCROSS_TRIPLE-install_name_tool -add_rpath @executable_path/../libs MacOS/tsMuxerGUI
+# ---------------------------------------------------------------------------
+# Bundle the macOS style plugin (without it Qt falls back to Fusion style)
+# ---------------------------------------------------------------------------
+mkdir -p bin/mac/tsMuxerGUI.app/Contents/plugins/styles
+cp "${QT_MAC}/plugins/styles/libqmacstyle.dylib" \
+  bin/mac/tsMuxerGUI.app/Contents/plugins/styles/
 
-# fixup tsMuxerGUI to use "local" Qt libs
-for_each_dep_lib MacOS/tsMuxerGUI '@rpath/' gui_lib_copy
+# Add rpath so the style plugin can find bundled frameworks
+"$INSTALL_NAME_TOOL" -add_rpath @loader_path/../../Frameworks \
+  bin/mac/tsMuxerGUI.app/Contents/plugins/styles/libqmacstyle.dylib
 
-# copy in the cocoa plugin manually
-mkdir -p plugins/platforms
-cp "${OSXCROSS_SYSROOT}/opt/local/plugins/platforms/libqcocoa.dylib" plugins/platforms/
+# Scan style plugin for additional framework dependencies
+copy_needed_frameworks bin/mac/tsMuxerGUI.app/Contents/plugins/styles/libqmacstyle.dylib
 
-# fixup cocoa lib to use "local" Qt libs
-for_each_dep_lib plugins/platforms/libqcocoa.dylib '@rpath/' gui_lib_copy
+# Scan all bundled frameworks for transitive dependencies
+# (e.g., QtWidgets depends on QtCore, QtGui; QtGui depends on QtDBus, etc.)
+changed=1
+while [ "$changed" -eq 1 ]; do
+  changed=0
+  for fw_dir in "${FRAMEWORKS_DIR}"/*.framework; do
+    [ -d "$fw_dir" ] || continue
+    fw_name=$(basename "$fw_dir" .framework)
+    fw_binary="${fw_dir}/Versions/A/${fw_name}"
+    [ -f "$fw_binary" ] || fw_binary="${fw_dir}/${fw_name}"
+    [ -f "$fw_binary" ] || continue
+    before=$(ls -d "${FRAMEWORKS_DIR}"/*.framework 2>/dev/null | wc -l)
+    copy_needed_frameworks "$fw_binary"
+    after=$(ls -d "${FRAMEWORKS_DIR}"/*.framework 2>/dev/null | wc -l)
+    if [ "$after" -gt "$before" ]; then
+      changed=1
+    fi
+  done
+done
 
-# add the Qt configuration file, so the plugin can be found
-cat << EOF > Resources/qt.conf
+# ---------------------------------------------------------------------------
+# Qt configuration so plugins can be found at runtime
+# ---------------------------------------------------------------------------
+mkdir -p bin/mac/tsMuxerGUI.app/Contents/Resources
+cat << 'EOF' > bin/mac/tsMuxerGUI.app/Contents/Resources/qt.conf
 [Paths]
 Plugins=plugins
 EOF
 
-popd
+# ---------------------------------------------------------------------------
+# Clean up and package
+# ---------------------------------------------------------------------------
+rm -rf build-arm64 build-x86_64
 
-rm -rf build
-
-mkdir ./bin/mac
-mv ./bin/tsMuxeR ./bin/mac/tsMuxeR
-mv ./bin/tsMuxerGUI.app ./bin/mac/tsMuxerGUI.app
-mv -t ./bin/mac/ ./bin/*.dylib 2>/dev/null || :
-zip -r ./bin/mac.zip ./bin/mac
-ls ./bin/mac/tsMuxeR && ls ./bin/mac/tsMuxerGUI.app/Contents/MacOS/tsMuxerGUI && ls ./bin/mac.zip
+zip -r bin/mac.zip bin/mac
+ls bin/mac/tsMuxeR
+ls bin/mac/tsMuxerGUI.app/Contents/MacOS/tsMuxerGUI
+ls bin/mac.zip

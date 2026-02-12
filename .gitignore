@@ -35,18 +35,28 @@
 #Visual Studio
 .vs
 *.sln
-*.json
 **/Debug
 **/Release
 *.vcxproj*
 
 #CMakeFiles
 **/CMakeFiles
-*.cmake
+cmake_install.cmake
 CMakeCache.txt
 /tsmuxer_main.sln.DotSettings.user
 
 #Actual build output
 bin/tsMuxeR
+bin/mac/
+bin/mac.zip
+bin/lnx/
+bin/lnx.zip
+bin/w32/
+bin/w32.zip
+bin/w64/
+bin/w64.zip
 build/
+build-arm64/
+build-x86_64/
 /build.ninja
+.DS_Store

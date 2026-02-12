@@ -23,14 +23,6 @@
 #include "lang_codes.h"
 #include "muxForm.h"
 
-// On macOS with Qt 6, native file dialogs can fail silently in some cases.
-// Use Qt's built-in dialogs as a workaround.
-#if defined(Q_OS_MACOS)
-static constexpr auto kFileDialogOptions = QFileDialog::DontUseNativeDialog;
-#else
-static constexpr auto kFileDialogOptions = QFileDialog::Options();
-#endif
-
 namespace QtCompat
 {
 inline QString strLeft(const QString& str, qsizetype n) { return str.first(n); }
@@ -49,6 +41,27 @@ inline QString strMid(const QString& str, qsizetype pos, qsizetype len = -1)
 
 namespace
 {
+QString getExistingDialogDir(const QString& path)
+{
+    const QString normalizedPath = QDir::fromNativeSeparators(path.trimmed());
+    if (normalizedPath.isEmpty())
+        return QDir::homePath();
+
+    QFileInfo fileInfo(normalizedPath);
+    if (fileInfo.exists())
+    {
+        if (fileInfo.isDir())
+            return fileInfo.absoluteFilePath();
+        return fileInfo.absolutePath();
+    }
+
+    QDir dir(normalizedPath);
+    if (dir.exists())
+        return dir.absolutePath();
+
+    return QDir::homePath();
+}
+
 using FileFilterVec = std::vector<std::pair<QString, std::vector<const char*>>>;
 
 QString makeFileFilter(const FileFilterVec& filters)
@@ -68,13 +81,31 @@ QString makeFileFilter(const FileFilterVec& filters)
         }
         s << ");;";
     }
-    rv.append(QString("%1 (*.*)").arg(TsMuxerWindow::tr("All files")));
+    rv.append(QString("%1 (*)").arg(TsMuxerWindow::tr("All files")));
     return rv;
 }
 
 QString fileDialogFilter()
 {
     // Consolidated filters to keep the dialog manageable on all platforms
+#if defined(Q_OS_MACOS)
+    // Native macOS dialogs are stricter about wildcard/type conversion.
+    // Keep filters simple and extension-only to avoid silent failures.
+    FileFilterVec filters = {
+        {TsMuxerWindow::tr("All supported media files"),
+         {"ac3", "ddp",  "ec3", "eac3", "aac", "avc", "mvc", "264",  "h264", "hevc", "265", "h265", "dts",
+          "dtshd", "dtsma", "thd", "truehd", "mpv", "m1v", "m2v", "mpa", "ts", "m2ts", "mts", "ssif", "mpg",
+          "mpeg", "vob", "evo", "mkv", "mka", "mks", "mp4", "m4a", "m4v", "mov", "mpls", "mpl", "sup", "srt",
+          "wav", "w64", "pcm"}},
+        {TsMuxerWindow::tr("Container files (TS, MKV, MP4, MOV, etc.)"),
+         {"ts", "m2ts", "mts", "ssif", "mpg", "mpeg", "vob", "evo", "mkv", "mka", "mks", "mp4", "m4a", "m4v", "mov"}},
+        {TsMuxerWindow::tr("Video elementary streams"),
+         {"avc", "mvc", "264", "h264", "hevc", "265", "h265", "mpv", "m1v", "m2v"}},
+        {TsMuxerWindow::tr("Audio files"),
+         {"ac3", "ddp", "ec3", "eac3", "aac", "dts", "dtshd", "dtsma", "thd", "truehd", "mpa", "wav", "w64", "pcm"}},
+        {TsMuxerWindow::tr("Subtitle files"), {"sup", "srt"}},
+        {TsMuxerWindow::tr("Blu-ray playlist"), {"mpls", "mpl"}}};
+#else
     FileFilterVec filters = {
         {TsMuxerWindow::tr("All supported media files"),
          {"ac3",  "ddp",   "ec3",   "eac3", "aac",    "avc",     "mvc",     "264", "h264", "hevc", "265", "h265",
@@ -90,6 +121,7 @@ QString fileDialogFilter()
           "wav", "w64", "pcm"}},
         {TsMuxerWindow::tr("Subtitle files"), {"sup", "srt"}},
         {TsMuxerWindow::tr("Blu-ray playlist"), {"mpls", "mpl"}}};
+#endif
     return makeFileFilter(filters);
 }
 
@@ -329,7 +361,8 @@ TsMuxerWindow::TsMuxerWindow()
       outFileNameDisableChange(false),
       muxForm(new MuxForm(this)),
       m_updateMeta(true),
-      m_3dMode(false)
+      m_3dMode(false),
+      m_fileDialogOpen(false)
 {
     ui->setupUi(this);
     setUiMetaItemsData();
@@ -2390,30 +2423,47 @@ void TsMuxerWindow::outFileNameChanged()
 
 void TsMuxerWindow::saveFileDialog()
 {
+    if (m_fileDialogOpen)
+        return;
+
     if (ui->radioButtonDemux->isChecked() || ui->radioButtonBluRay->isChecked() || ui->radioButtonAVCHD->isChecked())
     {
-        QString folder = QDir::toNativeSeparators(QFileDialog::getExistingDirectory(
-            this, tr("Select output folder"), getOutputDir(), QFileDialog::ShowDirsOnly | kFileDialogOptions));
-        if (!folder.isEmpty())
-        {
-            ui->outFileName->setText(folder + QDir::separator());
+        auto* dialog = new QFileDialog(this, tr("Select output folder"), getExistingDialogDir(getOutputDir()));
+        dialog->setFileMode(QFileDialog::Directory);
+        dialog->setOption(QFileDialog::ShowDirsOnly, true);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        m_fileDialogOpen = true;
+        connect(dialog, &QFileDialog::finished, this, [this](int) { m_fileDialogOpen = false; });
+        connect(dialog, &QFileDialog::fileSelected, this, [this](const QString& folder) {
+            if (folder.isEmpty())
+                return;
+            auto native = QDir::toNativeSeparators(folder);
+            ui->outFileName->setText(native + QDir::separator());
             outFileNameModified = true;
-            lastOutputDir = folder;
+            lastOutputDir = native;
             writeSettings();
-        }
+        });
+        dialog->open();
     }
     else
     {
         auto fileName = unquoteStr(ui->outFileName->text());
-        auto path = fileName.isEmpty() ? getOutputDir() : QFileInfo(fileName).absoluteFilePath();
-        fileName = QDir::toNativeSeparators(QFileDialog::getSaveFileName(
-            this, tr("Select file for muxing"), path, mSaveDialogFilter, nullptr, kFileDialogOptions));
-        if (!fileName.isEmpty())
-        {
-            ui->outFileName->setText(fileName);
-            lastOutputDir = QFileInfo(fileName).absolutePath();
+        auto startDir = getExistingDialogDir(fileName.isEmpty() ? getOutputDir() : fileName);
+        auto* dialog = new QFileDialog(this, tr("Select file for muxing"), startDir, mSaveDialogFilter);
+        dialog->setAcceptMode(QFileDialog::AcceptSave);
+        dialog->setFileMode(QFileDialog::AnyFile);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        m_fileDialogOpen = true;
+        connect(dialog, &QFileDialog::finished, this, [this](int) { m_fileDialogOpen = false; });
+        connect(dialog, &QFileDialog::fileSelected, this, [this](const QString& fileName) {
+            if (fileName.isEmpty())
+                return;
+            auto native = QDir::toNativeSeparators(fileName);
+            ui->outFileName->setText(native);
+            lastOutputDir = QFileInfo(native).absolutePath();
             writeSettings();
-        }
+        });
+        dialog->open();
     }
 }
 
@@ -2493,15 +2543,26 @@ void TsMuxerWindow::startMuxing()
 
 void TsMuxerWindow::saveMetaFileBtnClick()
 {
-    QString metaName =
-        QFileDialog::getSaveFileName(this, tr("Save project file"), changeFileExt(ui->outFileName->text(), "meta"),
-                                     tr("tsMuxeR project file (*.meta);;All files (*.*)"), nullptr, kFileDialogOptions);
-    if (metaName.isEmpty())
+    if (m_fileDialogOpen)
         return;
-    QFileInfo fi(metaName);
-    QDir dir;
-    dir.mkpath(fi.absolutePath());
-    saveMetaFile(metaName);
+
+    auto* dialog = new QFileDialog(this, tr("Save project file"),
+                                   getExistingDialogDir(changeFileExt(ui->outFileName->text(), "meta")),
+                                   tr("tsMuxeR project file (*.meta);;All files (*)"));
+    dialog->setAcceptMode(QFileDialog::AcceptSave);
+    dialog->setFileMode(QFileDialog::AnyFile);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    m_fileDialogOpen = true;
+    connect(dialog, &QFileDialog::finished, this, [this](int) { m_fileDialogOpen = false; });
+    connect(dialog, &QFileDialog::fileSelected, this, [this](const QString& metaName) {
+        if (metaName.isEmpty())
+            return;
+        QFileInfo fi(metaName);
+        QDir dir;
+        dir.mkpath(fi.absolutePath());
+        saveMetaFile(metaName);
+    });
+    dialog->open();
 }
 
 bool TsMuxerWindow::saveMetaFile(const QString& metaName)
@@ -2830,15 +2891,23 @@ void TsMuxerWindow::processAddFileList(OnCodecListReadyFn onCodecListReady, Post
 template <typename F>
 void TsMuxerWindow::showAddFilesDialog(QString&& windowTitle, F&& windowOkFn)
 {
-    const auto files =
-        QFileDialog::getOpenFileNames(this, windowTitle, lastInputDir, fileDialogFilter(), nullptr, kFileDialogOptions);
-    if (files.isEmpty())
+    if (m_fileDialogOpen)
         return;
-    lastInputDir = QDir::toNativeSeparators(files.back());
-    addFileList.clear();
-    for (auto f : files)
-    {
-        addFileList << QUrl::fromLocalFile(QDir::toNativeSeparators(f));
-    }
-    windowOkFn();
+
+    auto* dialog = new QFileDialog(this, windowTitle, getExistingDialogDir(lastInputDir), fileDialogFilter());
+    dialog->setFileMode(QFileDialog::ExistingFiles);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    m_fileDialogOpen = true;
+    connect(dialog, &QFileDialog::finished, this, [this](int) { m_fileDialogOpen = false; });
+    connect(dialog, &QFileDialog::filesSelected, this,
+            [this, okFn = std::forward<F>(windowOkFn)](const QStringList& files) {
+                if (files.isEmpty())
+                    return;
+                lastInputDir = QFileInfo(files.back()).absolutePath();
+                addFileList.clear();
+                for (const auto& f : files)
+                    addFileList << QUrl::fromLocalFile(QDir::toNativeSeparators(f));
+                okFn();
+            });
+    dialog->open();
 }

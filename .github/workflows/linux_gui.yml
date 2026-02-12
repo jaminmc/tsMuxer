@@ -5,10 +5,16 @@ on:
     branches: [master]
     paths:
     - 'tsMuxerGUI/**'
+    - 'tsMuxer/**'
+    - 'libmediation/**'
+    - 'CMakeLists.txt'
   pull_request:
     branches: [master]
     paths:
     - 'tsMuxerGUI/**'
+    - 'tsMuxer/**'
+    - 'libmediation/**'
+    - 'CMakeLists.txt'
 
 jobs:
   build-linux-gui:
@@ -18,6 +24,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       name: checkout
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libfreetype-dev zlib1g-dev
       
     - name: Install Qt
       uses: jurplel/install-qt-action@v4

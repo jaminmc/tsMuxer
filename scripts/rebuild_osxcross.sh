@@ -1,17 +1,59 @@
+#!/usr/bin/env bash
+#
+# Build universal (arm64 + x86_64) macOS CLI binary using osxcross.
+# Standalone version (runs directly inside a machine with osxcross installed).
+#
+
+set -e
+set -x
+
 export PATH=/usr/lib/osxcross/bin:$PATH
-export MACOSX_DEPLOYMENT_TARGET=10.15
 
-OSXCROSS_WRAPPER=$(ls -1 /usr/lib/osxcross/bin/x86_64-apple-darwin*-wrapper | xargs basename)
-OSXCROSS_TRIPLE="${OSXCROSS_WRAPPER/-wrapper/}" 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/osxcross_common.sh"
 
-export PKG_CONFIG=/usr/lib/osxcross/bin/$OSXCROSS_TRIPLE-pkg-config
-export OSXCROSS_MP_INC=1
-export LD_LIBRARY_PATH=/usr/lib/osxcross/lib:$LD_LIBRARY_PATH:/usr/lib/osxcross/macports/pkgs/opt/local/lib/
-rm -rf build
-mkdir build
-cd build
-$OSXCROSS_TRIPLE-cmake ../  -DTSMUXER_STATIC_BUILD=ON  -DCMAKE_TOOLCHAIN_FILE=/usr/lib/osxcross/toolchain.cmake 
-make
-cp tsMuxer/tsmuxer ../bin/tsMuxeR
-cd ..
-rm -rf build
+ARM64_CMAKE=$(find_tool arm64 cmake)
+X86_64_CMAKE=$(find_tool x86_64 cmake)
+LIPO=$(find_tool x86_64 lipo)
+
+# ---------------------------------------------------------------------------
+# Common CMake arguments
+# ---------------------------------------------------------------------------
+CMAKE_COMMON_ARGS=(
+  -DTSMUXER_STATIC_BUILD=ON
+  -DCMAKE_TOOLCHAIN_FILE="${OSXCROSS_ROOT}/toolchain.cmake"
+  -DWITHOUT_PKGCONFIG=TRUE
+  -DFREETYPE_LIBRARY="${FREETYPE_PREFIX}/lib/libfreetype.a"
+  -DFREETYPE_INCLUDE_DIRS="${FREETYPE_PREFIX}/include"
+)
+
+# ---------------------------------------------------------------------------
+# Build for arm64
+# ---------------------------------------------------------------------------
+rm -rf build-arm64 build-x86_64
+mkdir build-arm64
+cd build-arm64 || exit
+"$ARM64_CMAKE" ../ "${CMAKE_COMMON_ARGS[@]}"
+make -j"$(nproc)"
+cd .. || exit
+
+# ---------------------------------------------------------------------------
+# Build for x86_64
+# ---------------------------------------------------------------------------
+mkdir build-x86_64
+cd build-x86_64 || exit
+"$X86_64_CMAKE" ../ "${CMAKE_COMMON_ARGS[@]}"
+make -j"$(nproc)"
+cd .. || exit
+
+# ---------------------------------------------------------------------------
+# Create universal binary with lipo
+# ---------------------------------------------------------------------------
+mkdir -p bin
+"$LIPO" -create \
+  build-arm64/tsMuxer/tsmuxer \
+  build-x86_64/tsMuxer/tsmuxer \
+  -output bin/tsMuxeR
+
+rm -rf build-arm64 build-x86_64
+ls -l bin/tsMuxeR

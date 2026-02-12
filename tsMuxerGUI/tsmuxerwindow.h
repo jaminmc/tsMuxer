@@ -13,7 +13,6 @@
 
 #include "codecinfo.h"
 
-class QFileDialog;
 class QTableWidgetItem;
 class QComboBox;
 class QCheckBox;
@@ -161,7 +160,6 @@ class TsMuxerWindow : public QWidget
 
     QString metaName;
     Ui::TsMuxerWindow* ui;
-    QFileDialog* openFileDialog;
     int disableUpdatesCnt;
     bool processFinished;
     int processExitCode;
@@ -187,6 +185,7 @@ class TsMuxerWindow : public QWidget
     QTimer opacityTimer;
     bool m_updateMeta;
     bool m_3dMode;
+    bool m_fileDialogOpen;
     QnCheckBoxedHeaderView* m_header;
     QString lastSourceDir;
 
