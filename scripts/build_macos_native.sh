@@ -4,14 +4,23 @@ set -ex
 
 export MACOSX_DEPLOYMENT_TARGET=10.15
 
-brew install freetype
+if [ "${CMAKE_OSX_ARCHITECTURES:-}" = "x86_64" ]; then
+  arch -x86_64 brew install freetype
+else
+  brew install freetype
+fi
 
 mkdir build
 
 pushd build
+CMAKE_ARCH_FLAG=""
+if [ -n "${CMAKE_OSX_ARCHITECTURES:-}" ]; then
+  CMAKE_ARCH_FLAG="-DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+fi
+
 cmake -DCMAKE_BUILD_TYPE=Release -DTSMUXER_STATIC_BUILD=TRUE \
   "-DFREETYPE_LDFLAGS=bz2;$(brew --prefix)/lib/libpng.a" -DTSMUXER_GUI=TRUE \
-  -DWITHOUT_PKGCONFIG=TRUE ..
+  -DWITHOUT_PKGCONFIG=TRUE ${CMAKE_ARCH_FLAG} ..
 
 if ! num_cores=$(sysctl -n hw.logicalcpu); then
   num_cores=1
