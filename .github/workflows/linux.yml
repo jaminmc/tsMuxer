@@ -36,6 +36,6 @@ jobs:
       
     - uses: actions/upload-artifact@v4
       with:
-         name: tsMuxer
-         path: bin
+         name: tsMuxer-linux
+         path: bin/lnx.zip
       name: upload-artefact

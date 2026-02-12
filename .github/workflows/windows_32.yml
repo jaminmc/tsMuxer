@@ -36,6 +36,6 @@ jobs:
       
     - uses: actions/upload-artifact@v4
       with:
-         name: tsMuxer
-         path: bin
+         name: tsMuxer-w32
+         path: bin/w32.zip
       name: upload-artefact
