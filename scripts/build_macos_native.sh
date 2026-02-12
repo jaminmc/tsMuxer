@@ -5,9 +5,15 @@ set -ex
 export MACOSX_DEPLOYMENT_TARGET=10.15
 
 if [ "${CMAKE_OSX_ARCHITECTURES:-}" = "x86_64" ]; then
-  arch -x86_64 brew install freetype
+  # Install a separate x86_64 Homebrew at /usr/local for Intel libraries
+  NONINTERACTIVE=1 arch -x86_64 /bin/bash -c \
+    "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  X86_BREW=/usr/local/bin/brew
+  arch -x86_64 $X86_BREW install freetype
+  BREW_PREFIX=$($X86_BREW --prefix)
 else
   brew install freetype
+  BREW_PREFIX=$(brew --prefix)
 fi
 
 mkdir build
@@ -19,8 +25,12 @@ if [ -n "${CMAKE_OSX_ARCHITECTURES:-}" ]; then
 fi
 
 cmake -DCMAKE_BUILD_TYPE=Release -DTSMUXER_STATIC_BUILD=TRUE \
-  "-DFREETYPE_LDFLAGS=bz2;$(brew --prefix)/lib/libpng.a" -DTSMUXER_GUI=TRUE \
-  -DWITHOUT_PKGCONFIG=TRUE ${CMAKE_ARCH_FLAG} ..
+  "-DFREETYPE_LDFLAGS=bz2;${BREW_PREFIX}/lib/libpng.a" -DTSMUXER_GUI=TRUE \
+  -DWITHOUT_PKGCONFIG=TRUE ${CMAKE_ARCH_FLAG} \
+  -DCMAKE_PREFIX_PATH="${BREW_PREFIX}" \
+  -DFREETYPE_LIBRARY="${BREW_PREFIX}/lib/libfreetype.a" \
+  -DFREETYPE_INCLUDE_DIR_freetype2="${BREW_PREFIX}/include/freetype2" \
+  -DFREETYPE_INCLUDE_DIR_ft2build="${BREW_PREFIX}/include/freetype2" ..
 
 if ! num_cores=$(sysctl -n hw.logicalcpu); then
   num_cores=1
