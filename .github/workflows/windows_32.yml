@@ -9,20 +9,30 @@ jobs:
 
     runs-on: ubuntu-latest
     
-    container:
-      image: docker://jaminmc/tsmuxer_build:latest
-      volumes:
-      - /workspace:/github/workspace
-    
     steps:
     - uses: actions/checkout@v4
       name: checkout
+
+    - name: Free disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker image prune --all --force
+
+    - name: Pull Docker image
+      run: docker pull jaminmc/tsmuxer_build:latest
       
     - run: rm -f bin/.gitkeep
       name: clean-bin-folder
       
-    - run: ./scripts/rebuild_mxe32_docker.sh
-      name: build-for-windows
+    - name: build-for-windows
+      run: >
+        docker run --rm
+        -v ${{ github.workspace }}:/work -w /work
+        jaminmc/tsmuxer_build:latest
+        ./scripts/rebuild_mxe32_docker.sh
       
     - uses: actions/upload-artifact@v4
       with:
