@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-set -x
-set -e
+set -ex
 
 export MACOSX_DEPLOYMENT_TARGET=10.15
 

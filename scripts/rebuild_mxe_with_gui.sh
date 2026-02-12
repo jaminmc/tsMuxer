@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 export PATH=/usr/lib/mxe/usr/bin:$PATH
 # Unset LD_LIBRARY_PATH so MXE host tools (uic, moc, rcc) use their own Qt
 # libs instead of picking up an incompatible /opt/qt install.

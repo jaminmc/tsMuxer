@@ -7,9 +7,7 @@
 # Freetype is built as a universal static library.
 #
 
-set -e
-set -x
-set -o pipefail
+set -exo pipefail
 
 export PATH=/usr/lib/osxcross/bin:$PATH
 

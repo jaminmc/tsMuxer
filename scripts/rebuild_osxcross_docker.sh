@@ -4,8 +4,7 @@
 # Designed to run inside the jaminmc/tsmuxer_build Docker container.
 #
 
-set -e
-set -x
+set -ex
 
 export PATH=/usr/lib/osxcross/bin:$PATH
 

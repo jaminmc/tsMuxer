@@ -4,8 +4,7 @@
 # Standalone version (runs directly inside a machine with osxcross installed).
 #
 
-set -e
-set -x
+set -ex
 
 export PATH=/usr/lib/osxcross/bin:$PATH
 

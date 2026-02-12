@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 export PATH=/usr/lib/mxe/usr/bin:$PATH
 rm -rf build
 mkdir build
