@@ -109,6 +109,7 @@ uint32_t AV_RB32(uint8_t* buffer);
 void AV_WB16(uint8_t* buffer, uint16_t value);
 void AV_WB24(uint8_t* buffer, uint32_t value);
 void AV_WB32(uint8_t* buffer, uint32_t value);
+void AV_WB64(uint8_t* buffer, uint64_t value);
 
 std::string floatToTime(double time, char msSeparator = '.');
 double timeToFloat(const std::string& chapterStr);

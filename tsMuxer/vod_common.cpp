@@ -92,6 +92,7 @@ void AV_WB24(uint8_t* buffer, const uint32_t value)
     buffer[2] = static_cast<uint8_t>(value);
 }
 void AV_WB32(uint8_t* buffer, const uint32_t value) { *reinterpret_cast<uint32_t*>(buffer) = my_htonl(value); }
+void AV_WB64(uint8_t* buffer, const uint64_t value) { *reinterpret_cast<uint64_t*>(buffer) = my_htonll(value); }
 
 std::string floatToTime(const double time, const char msSeparator)
 {

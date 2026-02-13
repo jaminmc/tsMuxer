@@ -1290,8 +1290,14 @@ int MovDemuxer::mov_read_extradata(MOVAtom atom)
     if (num_tracks < 1)  // will happen with jp2 files
         return 0;
     Track* st = tracks[num_tracks - 1];
-    const int64_t newSize = st->codec_priv_size + atom.size + 8;
-    if (newSize > INT_MAX || static_cast<uint64_t>(atom.size) > INT_MAX)
+
+    // ISO 14496-12: use extended (16-byte) box header when the total box size
+    // (header + payload) exceeds what the compact 4-byte size field can hold.
+    const bool useExtendedSize = (static_cast<uint64_t>(atom.size) + 8 > UINT32_MAX);
+    const int headerSize = useExtendedSize ? 16 : 8;
+
+    const int64_t newSize = st->codec_priv_size + atom.size + headerSize;
+    if (newSize > INT_MAX || atom.size < 0)
         return -1;
 
     const int64_t oldSize = st->codec_priv_size;
@@ -1303,10 +1309,20 @@ int MovDemuxer::mov_read_extradata(MOVAtom atom)
     delete[] tmp;
     uint8_t* buf = st->codec_priv + oldSize;
 
-    //  !!! PROBLEM WITH MP4 SIZE ABOVE 4GB: TODO...
-    AV_WB32(buf, static_cast<uint32_t>(atom.size) + 8);
-    AV_WB32(buf + 4, my_htonl(atom.type));
-    get_buffer(buf + 8, static_cast<int>(atom.size));
+    if (useExtendedSize)
+    {
+        // Extended size box: [size=1][type][64-bit extended size][data]
+        AV_WB32(buf, 1);
+        AV_WB32(buf + 4, my_htonl(atom.type));
+        AV_WB64(buf + 8, static_cast<uint64_t>(atom.size) + 16);
+    }
+    else
+    {
+        // Compact box: [32-bit size][type][data]
+        AV_WB32(buf, static_cast<uint32_t>(atom.size + headerSize));
+        AV_WB32(buf + 4, my_htonl(atom.type));
+    }
+    get_buffer(buf + headerSize, static_cast<int>(atom.size));
     st->codec_priv_size = static_cast<int>(newSize);
     if (st->parsed_priv_data)
         st->parsed_priv_data->setPrivData(st->codec_priv, st->codec_priv_size);
