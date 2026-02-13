@@ -331,25 +331,58 @@ class MovParsedH264TrackData : public ParsedTrackPrivData
 
     unsigned newBufferSize(uint8_t* buff, const unsigned size) override
     {
+        if (!buff || size == 0)
+            return 0;
+
+        if (nal_length_size < 1 || nal_length_size > 4)
+        {
+            LTRACE(LT_WARN, 2, "MP4/MOV: invalid nal_length_size " << static_cast<int>(nal_length_size)
+                                                                    << ", using conservative estimate");
+            return size * 2;
+        }
+
+        const uint8_t* cur = buff;
         const uint8_t* end = buff + size;
         unsigned nalCnt = 0;
-        while (buff < end)
+        while (cur < end)
         {
-            if (buff + nal_length_size > end)
-                THROW(ERR_MOV_PARSE,
-                      "MP4/MOV error: Invalid H.264/AVC frame at position " << m_demuxer->getProcessedBytes())
-            const uint32_t nalSize = getNalSize(buff);
-            buff += nal_length_size;
-            if (buff + nalSize > end)
-                THROW(ERR_MOV_PARSE,
-                      "MP4/MOV error: Invalid H.264/AVC frame at position " << m_demuxer->getProcessedBytes())
-            buff += nalSize;
+            if (cur + nal_length_size > end)
+            {
+                LTRACE(LT_WARN, 2, "MP4/MOV: truncated NAL length field at position " << m_demuxer->getProcessedBytes()
+                                                                                       << ", stopping parse");
+                break;
+            }
+            const uint32_t nalSize = getNalSize(cur);
+            cur += nal_length_size;
+            if (nalSize == 0 || nalSize > 10 * 1024 * 1024)
+            {
+                LTRACE(LT_WARN, 2,
+                       "MP4/MOV: suspicious NAL size " << nalSize << " at position " << m_demuxer->getProcessedBytes());
+                break;
+            }
+            if (cur + nalSize > end)
+            {
+                LTRACE(LT_WARN, 2, "MP4/MOV: NAL size " << nalSize << " exceeds frame boundary at position "
+                                                         << m_demuxer->getProcessedBytes());
+                break;
+            }
+            cur += nalSize;
             ++nalCnt;
         }
         unsigned spsPpsSize = 0;
-        for (auto& i : spsPpsList) spsPpsSize += static_cast<uint32_t>(i.size() + 4);
+        for (const auto& i : spsPpsList)
+        {
+            const auto entrySize = static_cast<unsigned>(i.size() + 4);
+            if (spsPpsSize > UINT_MAX - entrySize)
+                return size * 2;  // overflow protection
+            spsPpsSize += entrySize;
+        }
 
-        return size + spsPpsSize + nalCnt * (4 - nal_length_size);
+        const unsigned naluOverhead = (nal_length_size < 4) ? nalCnt * (4 - nal_length_size) : 0;
+        if (size > UINT_MAX - spsPpsSize - naluOverhead)
+            return size * 2;  // overflow protection
+
+        return size + spsPpsSize + naluOverhead;
     }
 
    protected:

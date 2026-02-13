@@ -850,34 +850,69 @@ vector<vector<uint8_t>> hevc_extract_priv_data(const uint8_t* buff, int size, ui
 
     vector<vector<uint8_t>> spsPps;
     if (size < 23)
+    {
+        LTRACE(LT_WARN, 2, "HEVC extra data too short: " << size << " bytes");
         return spsPps;
+    }
 
     *nal_size = (buff[21] & 3) + 1;
+
     int num_arrays = buff[22];
+    if (num_arrays <= 0)
+        return spsPps;
+    if (num_arrays > 64)
+    {
+        LTRACE(LT_WARN, 2, "Suspicious HEVC num_arrays value: " << num_arrays << ", clamping to 64");
+        num_arrays = 64;
+    }
 
     const uint8_t* src = buff + 23;
     const uint8_t* end = buff + size;
     for (int i = 0; i < num_arrays; ++i)
     {
         if (src + 3 > end)
-            THROW(ERR_MOV_PARSE, "Invalid HEVC extra data format")
+        {
+            LTRACE(LT_WARN, 2, "Buffer overrun at HEVC param array " << i << " of " << num_arrays);
+            break;
+        }
         src++;  // type
         int cnt = AV_RB16(src);
         src += 2;
 
+        if (cnt < 0 || cnt > 256)
+        {
+            LTRACE(LT_WARN, 2, "Suspicious HEVC NAL count: " << cnt << " in array " << i);
+            if (cnt < 0)
+                continue;
+            cnt = std::min(cnt, 256);
+        }
+
         for (int j = 0; j < cnt; ++j)
         {
             if (src + 2 > end)
-                THROW(ERR_MOV_PARSE, "Invalid HEVC extra data format")
+            {
+                LTRACE(LT_WARN, 2, "Buffer overrun reading HEVC NAL size in array " << i);
+                break;
+            }
             int nalSize = (src[0] << 8) + src[1];
             src += 2;
+
+            if (nalSize <= 0)
+                continue;
+
             if (src + nalSize > end)
-                THROW(ERR_MOV_PARSE, "Invalid HEVC extra data format")
-            if (nalSize > 0)
             {
-                spsPps.emplace_back();
-                for (int k = 0; k < nalSize; ++k, ++src) spsPps.rbegin()->push_back(*src);
+                LTRACE(LT_WARN, 2, "HEVC NAL size " << nalSize << " exceeds remaining buffer, truncating");
+                nalSize = static_cast<int>(end - src);
+                if (nalSize <= 0)
+                    break;
             }
+
+            spsPps.emplace_back();
+            auto& nal = spsPps.back();
+            nal.reserve(nalSize);
+            for (int k = 0; k < nalSize; ++k, ++src)
+                nal.push_back(*src);
         }
     }
 
