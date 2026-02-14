@@ -191,6 +191,8 @@ class MatroskaMuxer final : public AbstractMuxer
     // Timecode tracking
     int64_t m_firstTimecode;  // first PTS seen (in INTERNAL_PTS_FREQ units) – used as reference
     bool m_firstTimecodeSet;
+    int64_t m_lastTimecodeMs;        // last PTS seen (in ms relative to start) for Duration
+    int64_t m_durationValueFilePos;  // absolute file position of the Duration float64 value
 
     // Deferred header writing: SegmentInfo + Tracks are written once ALL tracks
     // have received at least one packet, because stream readers haven't fully

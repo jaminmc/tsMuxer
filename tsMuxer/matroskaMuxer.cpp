@@ -188,6 +188,8 @@ MatroskaMuxer::MatroskaMuxer(MuxerManager* owner)
       m_cuesPos(0),
       m_firstTimecode(0),
       m_firstTimecodeSet(false),
+      m_lastTimecodeMs(0),
+      m_durationValueFilePos(0),
       m_headerWritten(false)
 {
 }
@@ -639,18 +641,23 @@ void MatroskaMuxer::writeSegmentInfo()
 
     uint8_t buf[512];
     int pos = 0;
-    // TimecodeScale: 1,000,000 ns = 1 ms (Matroska default)
-    pos += ebml_write_uint(buf + pos, MATROSKA_ID_TIMECODESCALE, 1000000);
-    // MuxingApp
+    pos += ebml_write_uint(buf + pos, MATROSKA_ID_TIMECODESCALE, 1000000);  // 1 ms
+
+    // Duration placeholder (patched in close() with actual value)
+    const int durationElementStart = pos;
+    pos += ebml_write_float(buf + pos, MATROSKA_ID_DURATION, 0.0);
+
     pos += ebml_write_string(buf + pos, MATROSKA_ID_MUXINGAPP, "tsMuxeR");
-    // WritingApp
     pos += ebml_write_string(buf + pos, MATROSKA_ID_WRITINGAPP, "tsMuxeR");
 
-    // Write the Info master element
     uint8_t header[16];
     int hdrLen = ebml_write_id(header, MATROSKA_ID_INFO);
     hdrLen += ebml_write_size(header + hdrLen, pos);
     writeToFile(header, hdrLen);
+
+    // MATROSKA_ID_DURATION (0x4489) = 2-byte ID + 1-byte size → float64 at offset +3
+    m_durationValueFilePos = m_file.pos() + durationElementStart + 3;
+
     writeToFile(buf, pos);
 }
 
@@ -901,17 +908,29 @@ std::vector<uint8_t> MatroskaMuxer::convertAV1ToLowOverhead(const uint8_t* data,
 {
     // Convert from start-code-separated OBUs (with emulation prevention bytes)
     // to MKV's "low overhead bitstream format" (obu_has_size_field=1, LEB128 sizes).
-    // Temporal delimiter OBUs are stripped per the AV1-in-Matroska spec.
+    //
+    // Per the AV1-in-Matroska spec:
+    //   - Temporal delimiter OBUs are stripped.
+    //   - Duplicate SEQUENCE_HEADER OBUs are deduplicated (keep only the last one
+    //     before the first FRAME/FRAME_HEADER).  The duplicates arise because
+    //     extractData() prepends the SH from the codec private, but the SimpleBlock
+    //     itself usually contains its own SH with potentially different trailing bits.
 
     uint8_t* const dataStart = const_cast<uint8_t*>(data);
     uint8_t* const dataEnd = const_cast<uint8_t*>(data + size);
-    std::vector<uint8_t> result;
-    result.reserve(size);
 
     // Temporary buffer for removing emulation prevention bytes
     std::vector<uint8_t> rawBuf(size);
 
-    // Find first OBU (skip past the initial start code)
+    // ---- Pass 1: collect each OBU in low-overhead form ----
+    struct ConvertedObu
+    {
+        Av1ObuType type;
+        std::vector<uint8_t> bytes;  // header + LEB128 size + raw payload
+    };
+    std::vector<ConvertedObu> obus;
+    obus.reserve(16);
+
     uint8_t* curObu = NALUnit::findNextNAL(dataStart, dataEnd);
 
     while (curObu < dataEnd)
@@ -949,20 +968,25 @@ std::vector<uint8_t> MatroskaMuxer::convertAV1ToLowOverhead(const uint8_t* data,
         // Skip temporal delimiter OBUs (not needed in MKV)
         if (obuHdr.obu_type != Av1ObuType::TEMPORAL_DELIMITER)
         {
+            ConvertedObu obu;
+            obu.type = obuHdr.obu_type;
+
             // Write OBU header byte(s) with obu_has_size_field=1 (bit 1)
-            uint8_t hdrByte = curObu[0] | 0x02;  // set obu_has_size_field bit
-            result.push_back(hdrByte);
+            const uint8_t hdrByte = curObu[0] | 0x02;
+            obu.bytes.push_back(hdrByte);
             if (obuHdr.obu_extension_flag)
-                result.push_back(curObu[1]);
+                obu.bytes.push_back(curObu[1]);
 
             // Write LEB128-encoded payload size
             uint8_t leb128Buf[8];
             const int leb128Len = encodeLeb128(leb128Buf, static_cast<uint64_t>(rawPayloadLen));
-            result.insert(result.end(), leb128Buf, leb128Buf + leb128Len);
+            obu.bytes.insert(obu.bytes.end(), leb128Buf, leb128Buf + leb128Len);
 
             // Write raw payload (emulation prevention bytes removed)
             if (rawPayloadLen > 0)
-                result.insert(result.end(), rawBuf.data(), rawBuf.data() + rawPayloadLen);
+                obu.bytes.insert(obu.bytes.end(), rawBuf.data(), rawBuf.data() + rawPayloadLen);
+
+            obus.push_back(std::move(obu));
         }
 
         // Advance to the next OBU (skip past the next start code)
@@ -970,6 +994,35 @@ std::vector<uint8_t> MatroskaMuxer::convertAV1ToLowOverhead(const uint8_t* data,
             curObu = NALUnit::findNextNAL(nextStartCode, dataEnd);
         else
             break;
+    }
+
+    // ---- Pass 2: deduplicate SEQUENCE_HEADER OBUs ----
+    // If multiple SEQUENCE_HEADERs appear before the first FRAME/FRAME_HEADER,
+    // keep only the last one (from the SimpleBlock data, not the codec private copy).
+    int lastShIdx = -1;
+    int firstFrameIdx = static_cast<int>(obus.size());
+    for (int i = 0; i < static_cast<int>(obus.size()); i++)
+    {
+        if (obus[i].type == Av1ObuType::SEQUENCE_HEADER)
+            lastShIdx = i;
+        if (obus[i].type == Av1ObuType::FRAME || obus[i].type == Av1ObuType::FRAME_HEADER)
+        {
+            firstFrameIdx = i;
+            break;
+        }
+    }
+
+    // ---- Pass 3: emit the final byte stream ----
+    std::vector<uint8_t> result;
+    result.reserve(size);
+
+    for (int i = 0; i < static_cast<int>(obus.size()); i++)
+    {
+        // Skip duplicate SEQUENCE_HEADERs that precede the first FRAME
+        if (obus[i].type == Av1ObuType::SEQUENCE_HEADER && i < firstFrameIdx && i != lastShIdx)
+            continue;
+
+        result.insert(result.end(), obus[i].bytes.begin(), obus[i].bytes.end());
     }
 
     return result;
@@ -1017,8 +1070,6 @@ std::vector<uint8_t> MatroskaMuxer::convertAnnexBToLengthPrefixed(const uint8_t*
 
     return result;
 }
-
-// writeSimpleBlock is now integrated into flushPendingFrame
 
 void MatroskaMuxer::flushCluster()
 {
@@ -1075,6 +1126,10 @@ void MatroskaMuxer::flushPendingFrame(MkvTrackInfo& track)
 
     // Compute PTS relative to stream start (convert internal PTS units to milliseconds)
     const int64_t relMs = (track.pendingPts - m_firstTimecode) / INTERNAL_PTS_PER_MS;
+
+    // Track the maximum timecode for the Duration element
+    if (relMs > m_lastTimecodeMs)
+        m_lastTimecodeMs = relMs;
 
     // Decide whether to start a new cluster
     const bool needNewCluster = !m_clusterOpen || (relMs - m_clusterTimecodeMs >= CLUSTER_MAX_DURATION_MS) ||
@@ -1333,6 +1388,33 @@ bool MatroskaMuxer::close()
     uint8_t sizeBuf[8];
     ebml_write_size_fixed(sizeBuf, segmentSize, 8);
     m_file.write(sizeBuf, 8);
+
+    // Patch Duration element: highest PTS + one frame duration
+    if (m_durationValueFilePos > 0 && m_lastTimecodeMs > 0)
+    {
+        double frameDurationMs = 0.0;
+        for (const auto& [idx, track] : m_tracks)
+        {
+            if (track.trackType == 1 && track.fps > 0)
+            {
+                frameDurationMs = 1000.0 / track.fps;
+                break;
+            }
+        }
+        const double durationMs = static_cast<double>(m_lastTimecodeMs) + frameDurationMs;
+
+        // Write as big-endian IEEE 754 float64
+        uint64_t bits;
+        memcpy(&bits, &durationMs, 8);
+        uint8_t durationBuf[8];
+        for (int i = 7; i >= 0; i--)
+        {
+            durationBuf[i] = static_cast<uint8_t>(bits & 0xFF);
+            bits >>= 8;
+        }
+        m_file.seek(m_durationValueFilePos);
+        m_file.write(durationBuf, 8);
+    }
 
     m_file.close();
     return true;

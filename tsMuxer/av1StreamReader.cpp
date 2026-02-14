@@ -41,7 +41,7 @@ void AV1StreamReader::incTimings()
 {
     if (m_totalFrameNum++ > 0)
         m_curDts += m_pcrIncPerFrame;
-    m_curPts = m_curDts;  // AV1 in TS: PTS is always present
+    m_curPts = m_curDts;  // AV1: PTS is always present
     m_frameNum++;
     m_firstFrame = false;
 }
@@ -190,41 +190,38 @@ int AV1StreamReader::intDecodeNAL(uint8_t* buff)
                 m_spsPpsFound = true;
                 updateFPS(nullptr, curPos, nextNalWithStartCode, 0);
 
-                // Store the sequence header for writeAdditionData
-                if (nextNalWithStartCode > curPos)
+                // Store the sequence header OBU for writeAdditionData.
+                // Find the next start code boundary and strip trailing zeros to
+                // avoid including the next OBU's start code prefix.
                 {
-                    const int dataLen = static_cast<int>(nextNalWithStartCode - curPos);
-                    m_seqHdrBuffer.resize(dataLen);
-                    memcpy(m_seqHdrBuffer.data(), curPos, dataLen);
+                    uint8_t* scPos = NALUnit::findNALWithStartCode(curPos + 1, m_bufEnd, true);
+                    uint8_t* obuEnd = scPos;
+                    while (obuEnd > curPos + hdrLen && obuEnd[-1] == 0) obuEnd--;
+                    const int dataLen = static_cast<int>(obuEnd - curPos);
+                    if (dataLen > 0)
+                    {
+                        m_seqHdrBuffer.resize(dataLen);
+                        memcpy(m_seqHdrBuffer.data(), curPos, dataLen);
+                    }
                 }
 
                 // Determine HDR/WCG indicator from color properties
                 if (m_seqHdr.transfer_characteristics == AV1_TC_PQ || m_seqHdr.transfer_characteristics == AV1_TC_HLG)
-                {
-                    // HDR content
-                    if (m_seqHdr.color_primaries == AV1_CP_BT_2020)
-                        m_hdrWcgIdc = 2;  // Both HDR and WCG
-                    else
-                        m_hdrWcgIdc = 2;  // HDR (assume WCG too for PQ/HLG)
-                }
+                    m_hdrWcgIdc = 2;  // HDR (+ WCG assumed for PQ/HLG)
                 else if (m_seqHdr.color_primaries == AV1_CP_BT_2020)
-                {
                     m_hdrWcgIdc = 1;  // WCG only
-                }
                 else if (m_seqHdr.color_primaries == AV1_CP_BT_709 || m_seqHdr.color_primaries == AV1_CP_BT_601)
-                {
                     m_hdrWcgIdc = 0;  // SDR
-                }
                 else
-                {
                     m_hdrWcgIdc = 3;  // No indication
-                }
             }
             break;
 
         case Av1ObuType::TEMPORAL_DELIMITER:
-            // A temporal delimiter signals the start of a new access unit.
-            // If we already found a frame, this is the boundary.
+            // TD marks the start of a new temporal unit.  We split only at TD
+            // boundaries (not at FRAME OBU boundaries) to preserve the source's
+            // frame bundling — some MKV blocks contain multiple FRAME OBUs that
+            // must stay together as one temporal unit.
             if (frameFound)
             {
                 m_lastDecodedPos = prevPos;
@@ -236,28 +233,24 @@ int AV1StreamReader::intDecodeNAL(uint8_t* buff)
         case Av1ObuType::FRAME:
         case Av1ObuType::FRAME_HEADER:
         {
-            // Parse frame header for keyframe detection
+            // Parse frame header for keyframe detection (no boundary split here).
             if (m_seqHdrFound && payloadLen > 0)
             {
                 Av1FrameHeader frmHdr;
                 if (frmHdr.deserialize(payload, payloadLen, m_seqHdr) == 0)
                 {
-                    if (frmHdr.frame_type == Av1FrameType::KEY_FRAME ||
-                        frmHdr.frame_type == Av1FrameType::INTRA_ONLY_FRAME)
+                    // Exclude show_existing_frame: it doesn't signal frame_type in the
+                    // bitstream (deserializer defaults to KEY_FRAME), so including it
+                    // would falsely mark bundled blocks as keyframes.
+                    if (!frmHdr.show_existing_frame && (frmHdr.frame_type == Av1FrameType::KEY_FRAME ||
+                                                        frmHdr.frame_type == Av1FrameType::INTRA_ONLY_FRAME))
                     {
                         m_lastIFrame = true;
                     }
                 }
             }
-
-            if (frameFound)
-            {
-                // Another frame found - boundary
-                m_lastDecodedPos = prevPos;
-                incTimings();
-                return 0;
-            }
-            frameFound = true;
+            if (!frameFound)
+                frameFound = true;
             break;
         }
 

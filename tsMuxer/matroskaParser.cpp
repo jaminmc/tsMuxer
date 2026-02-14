@@ -258,9 +258,12 @@ ParsedAV1TrackData::ParsedAV1TrackData(const uint8_t* buff, const int size) : m_
 
 void ParsedAV1TrackData::extractData(AVPacket* pkt, uint8_t* buff, const int size)
 {
-    // AV1 in MKV uses "low overhead bitstream format":
-    // each OBU has a header with obu_has_size_field=1, followed by LEB128 size, then payload.
-    // We need to convert to start-code-prefixed format for MPEG-TS.
+    // Convert AV1 OBUs from MKV's low-overhead format (obu_has_size_field=1,
+    // LEB128 sizes) to start-code-prefixed format for internal processing.
+    //
+    // A Temporal Delimiter OBU is inserted at the start of each block so the
+    // stream reader can detect source block boundaries and preserve bundled
+    // temporal units (blocks containing multiple FRAME OBUs).
 
     // First pass: calculate output size
     const uint8_t* src = buff;
@@ -274,7 +277,8 @@ void ParsedAV1TrackData::extractData(AVPacket* pkt, uint8_t* buff, const int siz
     }
 
     // Estimate size for converted OBUs (start code + header + emulation overhead)
-    totalSize += size * 2 + 16;  // generous estimate for emulation prevention overhead
+    // +4 for the TD boundary marker
+    totalSize += size * 2 + 16 + 4;
 
     pkt->data = new uint8_t[totalSize];
     uint8_t* dst = pkt->data;
@@ -289,6 +293,12 @@ void ParsedAV1TrackData::extractData(AVPacket* pkt, uint8_t* buff, const int siz
         }
         m_firstExtract = false;
     }
+
+    // Temporal Delimiter OBU as block boundary marker (start-code + header byte 0x10)
+    *dst++ = 0x00;
+    *dst++ = 0x00;
+    *dst++ = 0x01;
+    *dst++ = 0x10;  // TD OBU header
 
     // Convert each OBU from low-overhead format to start-code format
     src = buff;
@@ -314,8 +324,12 @@ void ParsedAV1TrackData::extractData(AVPacket* pkt, uint8_t* buff, const int siz
         if (payload + obuPayloadSize > end)
             break;
 
-        // Skip temporal delimiter OBUs (not needed in TS start-code format,
-        // as they'll be added by the muxer if needed)
+        // Skip source temporal delimiter OBUs (we've inserted our own above)
+        if (obuHdr.obu_type == Av1ObuType::TEMPORAL_DELIMITER)
+        {
+            src = payload + obuPayloadSize;
+            continue;
+        }
 
         // Write start code
         *dst++ = 0x00;
