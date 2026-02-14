@@ -45,7 +45,10 @@ class MPEGStreamReader : public AbstractStreamReader
     }
 
     [[nodiscard]] double getFPS() const { return m_fps; }
-    [[nodiscard]] VideoAspectRatio getStreamAR() const { return m_streamAR; }
+    [[nodiscard]] VideoAspectRatio getStreamAR() const
+    {
+        return m_ar != VideoAspectRatio::AR_KEEP_DEFAULT ? m_ar : m_streamAR;
+    }
     void setAspectRatio(const VideoAspectRatio ar) { m_ar = ar; }
     int64_t getProcessedSize() override;
     void setBuffer(uint8_t* data, uint32_t dataLen, bool lastBlock = false) override;

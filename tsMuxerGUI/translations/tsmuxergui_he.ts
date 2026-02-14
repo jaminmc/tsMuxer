@@ -3171,6 +3171,11 @@
         <translation>שילוב M2TS</translation>
     </message>
     <message>
+        <location filename="../tsmuxerwindow.ui" line="2604"/>
+        <source>MKV muxing</source>
+        <translation>MKV מוקסם</translation>
+    </message>
+    <message>
         <location filename="../tsmuxerwindow.ui" line="2595"/>
         <source>Blu-ray ISO</source>
         <translation>Blu-ray ISO</translation>
@@ -3278,6 +3283,11 @@
         <location filename="../tsmuxerwindow.cpp" line="97"/>
         <source>Transport Stream</source>
         <translation>Transport Stream</translation>
+    </message>
+    <message>
+        <location filename="../tsmuxerwindow.cpp" line="141"/>
+        <source>Matroska</source>
+        <translation>Matroska</translation>
     </message>
     <message>
         <location filename="../tsmuxerwindow.cpp" line="69"/>
@@ -3394,7 +3404,7 @@
     <message>
         <location filename="../tsmuxerwindow.cpp" line="1191"/>
         <source>Track %1 was not recognized and ignored. File name: &quot;%2&quot;</source>
-        <translation>הרצועה % 1 לא זוהתה והתעלמה ממנה. שם הקובץ: &quot;%2&quot;</translation>
+        <translation>הרצועה %1 לא זוהתה והתעלמה ממנה. שם הקובץ: &quot;%2&quot;</translation>
     </message>
     <message>
         <location filename="../tsmuxerwindow.cpp" line="1435"/>
@@ -3482,7 +3492,7 @@
     <message>
         <location filename="../tsmuxerwindow.cpp" line="2459"/>
         <source>Overwrite existing %1?</source>
-        <translation>להחליף את% 1 הקיים?</translation>
+        <translation>להחליף את %1 הקיים?</translation>
     </message>
     <message>
         <location filename="../tsmuxerwindow.cpp" line="2460"/>

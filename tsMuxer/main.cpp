@@ -14,6 +14,7 @@
 #include "mpegStreamReader.h"
 #include "muxerManager.h"
 #include "pgsStreamReader.h"
+#include "matroskaMuxer.h"
 #include "singleFileMuxer.h"
 #include "tsMuxer.h"
 
@@ -22,6 +23,7 @@ using namespace std;
 BufferedReaderManager readManager(2, DEFAULT_FILE_BLOCK_SIZE, DEFAULT_FILE_BLOCK_SIZE + MAX_AV_PACKET_SIZE,
                                   DEFAULT_FILE_BLOCK_SIZE / 2);
 TSMuxerFactory tsMuxerFactory;
+MatroskaMuxerFactory matroskaMuxerFactory;
 SingleFileMuxerFactory singleFileMuxerFactory;
 
 static constexpr char EXCEPTION_ERR_MSG[] =
@@ -709,10 +711,26 @@ int main(int argc, char** argv)
         DiskType dt = checkBluRayMux(argv[1], autoChapterLen, customChapterList, firstMplsOffset, firstM2tsOffset,
                                      insertBlankPL, blankNum, stereoMode, isoDiskLabel);
         std::string fileExt2 = unquoteStr(fileExt);
+        bool mkvMode = fileExt2 == "MKV" || fileExt2 == "MKA";
         bool muxMode =
             fileExt2 == "M2TS" || fileExt2 == "TS" || fileExt2 == "SSIF" || fileExt2 == "ISO" || dt != DiskType::NONE;
 
-        if (muxMode)
+        if (mkvMode)
+        {
+            MuxerManager muxerManager(readManager, matroskaMuxerFactory);
+            muxerManager.openMetaFile(argv[1]);
+
+            string dstFile = unquoteStr(argv[2]);
+            if (!isValidFileName(dstFile))
+                throw runtime_error(string("Output filename is invalid: ") + dstFile);
+
+            if (muxerManager.getTrackCnt() == 0)
+                THROW(ERR_COMMON, "No tracks selected")
+            muxerManager.doMux(dstFile, nullptr);
+
+            LTRACE(LT_INFO, 2, "Mux successful complete");
+        }
+        else if (muxMode)
         {
             BlurayHelper blurayHelper;
 
@@ -808,7 +826,7 @@ int main(int argc, char** argv)
         auto totalTime = endTime - startTime;
         auto seconds = std::chrono::duration_cast<std::chrono::seconds>(totalTime);
         auto minutes = std::chrono::duration_cast<std::chrono::minutes>(totalTime);
-        if (muxMode)
+        if (muxMode || mkvMode)
         {
             LTRACE2(LT_INFO, "Muxing time: ")
         }

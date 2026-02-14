@@ -18,6 +18,15 @@ Examples:
 
 tsMuxeR can be run in track detection mode or muxing mode. If tsMuxeR is run with only one argument, then the program displays track information required to construct a meta file. When running with two arguments, tsMuxeR starts the muxing or demuxing process.
 
+Supported output formats:
+* **TS** - MPEG Transport Stream
+* **M2TS** - Blu-ray MPEG-2 Transport Stream
+* **MKV/MKA** - Matroska Video/Audio container
+* **ISO** - Blu-ray disc image
+* **Blu-ray folder structure** - BDMV directory layout
+
+The output format is determined by the file extension of the output file name (e.g. `.ts`, `.m2ts`, `.mkv`, `.mka`, `.iso`).
+
 The output of the program is encoded in UTF-8, which means that non-ASCII characters will not show up properly in the Windows console by default. If you want to see the output properly, run `chcp 65001` before running tsMuxeR.
 
 ## Meta file format
@@ -37,6 +46,14 @@ A_AC3, D:/media/test/stream.ac3, timeshift=-10000ms
 ```
 In this example one AC3 audio stream and one H264 video stream are multiplexed into BD disc. The input file name can reference an elementary stream or a track located inside a container.
 
+Example of META file for MKV output:
+```
+MUXOPT --vbr
+V_MPEG4/ISO/AVC, D:/media/test/stream.h264, fps=25
+A_AC3, D:/media/test/stream.ac3, timeshift=-10000ms
+```
+When the output file has an `.mkv` or `.mka` extension, tsMuxeR automatically uses the Matroska muxer. Most MUXOPT parameters related to TS/Blu-ray (such as `--blu-ray`, `--new-audio-pes`, `--pcr-on-video-pid`) are not applicable to MKV output and will be ignored.
+
 Supported input containers:
 * TS/M2TS/MTS
 * EVO/VOB/MPG/MPEG
@@ -54,6 +71,7 @@ V_MPEG4/ISO/AVC   | H.264/AVC
 V_MPEG4/ISO/MVC   | H.264/MVC 
 V_MS/VFW/WVC1     | VC1 
 V_MPEG-2          | MPEG2 
+V_AV1             | AV1 
 A_AC3             | AC3/AC3+/TRUE-HD 
 A_AAC             | AAC 
 A_DTS             | DTS/DTS-Express/DTS-HD 
@@ -85,7 +103,7 @@ Additional parameters for video tracks:
 
 Parameter         | Description 
 ---               | --- 
-fps               | The number of frames per second. If not defined, the value is auto detected if available in the source stream. If not, it defaults to 23.976. 
+fps               | The number of frames per second. If not defined, the value is auto detected from the source stream or the container metadata (e.g. MKV default_duration, MP4 timescale). If neither source is available, the GUI defaults to 23.976 and the CLI defaults to 25. 
 delPulldown       | Remove pulldown from the track, if it exists. If the pulldown is present, the FPS value is changed from 30 to 24. 
 ar                | Override video aspect ratio. 16:9, 4:3 e.t.c. 
 

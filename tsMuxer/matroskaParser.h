@@ -202,6 +202,12 @@ constexpr auto MATROSKA_CODEC_ID_AUDIO_AAC = "A_AAC";
 constexpr auto MATROSKA_CODEC_ID_AUDIO_PCM_BIG = "A_PCM/INT/BIG";
 constexpr auto MATROSKA_CODEC_ID_AUDIO_PCM_LIT = "A_PCM/INT/LIT";
 constexpr auto MATROSKA_CODEC_ID_SUBTITLE_PGS = "S_HDMV/PGS";
+constexpr auto MATROSKA_CODEC_ID_AV1 = "V_AV1";
+constexpr auto MATROSKA_CODEC_ID_AUDIO_DTS = "A_DTS";
+constexpr auto MATROSKA_CODEC_ID_AUDIO_EAC3 = "A_EAC3";
+constexpr auto MATROSKA_CODEC_ID_AUDIO_TRUEHD = "A_TRUEHD";
+constexpr auto MATROSKA_CODEC_ID_AUDIO_MPEG_L3 = "A_MPEG/L3";
+constexpr auto MATROSKA_CODEC_ID_VIDEO_MPEG2 = "V_MPEG2";
 
 /* max. depth in the EBML tree structure */
 constexpr auto EBML_MAX_DEPTH = 16;
@@ -242,6 +248,18 @@ class ParsedH266TrackData final : public ParsedH264TrackData
     ~ParsedH266TrackData() override = default;
 
     bool spsppsExists(uint8_t* buff, int size) override;
+};
+
+class ParsedAV1TrackData final : public ParsedTrackPrivData
+{
+   public:
+    ParsedAV1TrackData(const uint8_t* buff, int size);
+    ~ParsedAV1TrackData() override = default;
+    void extractData(AVPacket* pkt, uint8_t* buff, int size) override;
+
+   private:
+    std::vector<std::vector<uint8_t>> m_configOBUs;  // start-code-prefixed config OBUs
+    bool m_firstExtract;
 };
 
 class ParsedAC3TrackData final : public ParsedTrackPrivData

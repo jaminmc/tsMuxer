@@ -6,6 +6,8 @@
 
 class LPCMStreamReader final : public SimplePacketizerReader
 {
+    friend class MatroskaMuxer;
+
    public:
     enum class LPCMHeaderType
     {

@@ -1,3 +1,24 @@
+## tsMuxeR 2.8.0
+- Introduced AV1 codec support in MPEG-TS, implementing the AOM "Carriage of AV1 in MPEG-2 TS" draft specification
+- AV1 muxing from MKV and MP4/MOV containers into MPEG-TS with start-code based OBU format and emulation prevention bytes
+- AV1 demuxing from MPEG-TS to raw .obu elementary stream files
+- AV1 Sequence Header parsing for profile, level, resolution, bit depth, color primaries, transfer characteristics, and HDR/WCG detection
+- AV1 PMT descriptors: Registration descriptor (format_identifier 'AV01') and AV1 video descriptor (tag 0x80) per AOM spec
+- AV1 keyframe detection for random access point signaling in MPEG-TS adaptation field
+- Introduced automatic FPS detection from container metadata (MKV default_duration, MP4/MOV timescale) for codecs that lack timing info in the elementary stream (e.g. AV1)
+- Fixed MP4/MOV files larger than 4GB not being read correctly due to compact atom size overflow
+- Fixed AAC MPEG-2 TS descriptor (was disabled with early return; now emits proper AAC descriptor tag 0x2B)
+- Fixed TrueHD/MLP TS descriptor to emit Blu-ray compliant HDMV registration descriptor in Blu-ray mode, or SMPTE-RA 'mlpa' registration descriptor otherwise
+- Updated GUI to recognize AV1 codec: file dialog filters (.obu), About dialog, BD V3 auto-selection, and video track settings
+- Updated all GUI About dialog translations (EN, DE, ES, FR, HE, RU, ZH) to include H.266/VVC and AV1 in supported codecs list
+- Introduced Matroska (MKV/MKA) muxing support with EBML writing, cluster-based output, Cues index, and SeekHead
+- Supported codecs for MKV output: H.264, HEVC, VVC, AV1, VC-1, MPEG-2 (video); AAC, AC3, E-AC3, DTS, TrueHD, LPCM, MP3 (audio); SRT, PGS (subtitles)
+- Added CodecPrivate generation for H.264 (AVCDecoderConfigurationRecord), HEVC (HEVCDecoderConfigurationRecord), AV1 (AV1CodecConfigurationRecord), AAC (AudioSpecificConfig), and VVC
+- Added MKV radio button to the GUI output panel with save dialog filter and auto-detection of .mkv/.mka extensions
+- Updated all GUI translations (DE, ES, FR, HE, RU, ZH) with MKV muxing strings
+- Added missing Matroska codec ID constants (A_DTS, A_EAC3, A_TRUEHD, A_MPEG/L3, V_MPEG2)
+- Fixed aspect ratio override (`ar` parameter in metafile) being ignored for MPEG-2 and other video streams, so the original stream aspect ratio was always retained
+
 ## tsMuxeR 2.7.1
 - Fixed file dialogs not appearing on macOS with Qt6 by using non-native dialogs
 - Fixed browse button for output folder passing wrong parameter to file dialog

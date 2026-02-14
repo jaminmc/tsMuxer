@@ -4,6 +4,8 @@ project (tsmuxer LANGUAGES CXX)
 add_executable (tsmuxer
   aac.cpp
   aacStreamReader.cpp
+  av1.cpp
+  av1StreamReader.cpp
   abstractDemuxer.cpp
   abstractMuxer.cpp
   ac3Codec.cpp
@@ -27,6 +29,7 @@ add_executable (tsmuxer
   lpcmStreamReader.cpp
   main.cpp
   matroskaDemuxer.cpp
+  matroskaMuxer.cpp
   matroskaParser.cpp
   metaDemuxer.cpp
   mlpCodec.cpp

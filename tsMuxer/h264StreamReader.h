@@ -11,6 +11,8 @@
 
 class H264StreamReader final : public MPEGStreamReader
 {
+    friend class MatroskaMuxer;
+
    public:
     enum class SeiMethod
     {

@@ -31,6 +31,7 @@
 #include "vc1StreamReader.h"
 #include "vodCoreException.h"
 #include "vod_common.h"
+#include "av1StreamReader.h"
 #include "vvcStreamReader.h"
 
 using namespace std;
@@ -494,6 +495,23 @@ int METADemuxer::addStream(const string& codec, const string& codecStreamName, c
     streamInfo.m_addParams = addParams;
     int streamIndex = codecReader->getStreamIndex();
 
+    // If the codec is a video stream reader with no manually specified FPS,
+    // try to get the FPS from the container (e.g. MKV default_duration, MOV timescale)
+    if (addParams.find("fps") == addParams.end())
+    {
+        auto mpegReader = dynamic_cast<MPEGStreamReader*>(codecReader);
+        if (mpegReader && mpegReader->getFPS() == 0.0 && dataReader == &m_containerReader)
+        {
+            auto demuxerIt = m_containerReader.m_demuxers.find(fileList[0]);
+            if (demuxerIt != m_containerReader.m_demuxers.end() && demuxerIt->second.m_demuxer)
+            {
+                const double containerFps = correctFps(demuxerIt->second.m_demuxer->getTrackFps(pid));
+                if (containerFps > 0.0)
+                    mpegReader->setFPS(containerFps);
+            }
+        }
+    }
+
     // fields for SS PG stream
     auto pgStream = dynamic_cast<PGSStreamReader*>(codecReader);
     if (pgStream)
@@ -659,6 +677,25 @@ DetectStreamRez METADemuxer::DetectStreamReader(const BufferedReaderManager& rea
                     trackRez.isSecondary = true;
             }
 
+            // If video stream description lacks FPS or says "not found", try to get it from the container
+            if (strStartWith(trackRez.codecInfo.programName, "V_"))
+            {
+                const size_t fpsNotFoundPos = trackRez.streamDescr.find("Frame rate: not found");
+                const bool hasFpsField = trackRez.streamDescr.find("Frame rate:") != string::npos;
+                if (fpsNotFoundPos != string::npos || !hasFpsField)
+                {
+                    const double containerFps = correctFps(demuxer->getTrackFps(itr.first));
+                    if (containerFps > 0.0)
+                    {
+                        if (fpsNotFoundPos != string::npos)
+                            trackRez.streamDescr.replace(fpsNotFoundPos, 21,
+                                                         "Frame rate: " + doubleToStr(containerFps));
+                        else
+                            trackRez.streamDescr += "  Frame rate: " + doubleToStr(containerFps);
+                    }
+                }
+            }
+
             if (strStartWith(trackRez.codecInfo.programName, "V_"))
                 addTrack(Vstreams, trackRez);
             else
@@ -782,6 +819,11 @@ CheckStreamRez METADemuxer::detectTrackReader(uint8_t* tmpBuffer, int len,
 
     auto mpeg2ccodec = std::make_unique<MPEG2StreamReader>();
     rez = mpeg2ccodec->checkStream(tmpBuffer, len);
+    if (rez.codecInfo.codecID)
+        return rez;
+
+    auto av1Codec = std::make_unique<AV1StreamReader>();
+    rez = av1Codec->checkStream(tmpBuffer, len);
     if (rez.codecInfo.codecID)
         return rez;
 
@@ -910,6 +952,17 @@ AbstractStreamReader* METADemuxer::createCodec(const string& codecName, const ma
             double fps = strToDouble(itr->second.c_str());
             fps = correctFps(fps);
             dynamic_cast<VVCStreamReader*>(rez)->setFPS(fps);
+        }
+    }
+    else if (codecName == "V_AV1")
+    {
+        rez = new AV1StreamReader();
+        auto itr = addParams.find("fps");
+        if (itr != addParams.end())
+        {
+            double fps = strToDouble(itr->second.c_str());
+            fps = correctFps(fps);
+            dynamic_cast<AV1StreamReader*>(rez)->setFPS(fps);
         }
     }
     else if (codecName == "V_MS/VFW/WVC1")

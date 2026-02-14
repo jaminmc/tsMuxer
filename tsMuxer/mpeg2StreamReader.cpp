@@ -48,6 +48,12 @@ int MPEG2StreamReader::getTSDescriptor(uint8_t* dstBuff, bool blurayMode, bool h
         (void)e;
     }
 
+    if (m_ar != VideoAspectRatio::AR_KEEP_DEFAULT)
+    {
+        m_sequence.aspect_ratio_info = static_cast<uint8_t>(m_ar);
+        m_streamAR = m_ar;
+    }
+
     // HDMV registration descriptor
     *dstBuff++ = static_cast<uint8_t>(TSDescriptorTag::HDMV);  // registration descriptor tag
     *dstBuff++ = 8;                                            // descriptor length
@@ -349,4 +355,14 @@ int MPEG2StreamReader::findFrameExt(uint8_t* buffer)
 void MPEG2StreamReader::updateStreamFps(void* nalUnit, uint8_t* buff, uint8_t* nextNal, int oldSpsLen)
 {
     m_sequence.setFrameRate(buff + 1, m_fps);
+}
+
+void MPEG2StreamReader::updateStreamAR(void* nalUnit, uint8_t* buff, uint8_t* nextNal, int oldSpsLen)
+{
+    if (m_ar != VideoAspectRatio::AR_KEEP_DEFAULT)
+    {
+        MPEGSequenceHeader::setAspectRatio(buff + 1, m_ar);
+        m_sequence.aspect_ratio_info = static_cast<uint8_t>(m_ar);
+        m_streamAR = m_ar;
+    }
 }

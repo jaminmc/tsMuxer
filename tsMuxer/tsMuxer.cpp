@@ -236,6 +236,10 @@ void TSMuxer::intAddStream(const std::string& streamName, const std::string& cod
         {
             m_pesType[tsStreamIndex] = PES_VVC_ID;
         }
+        else if (codecName == "V_AV1")
+        {
+            m_pesType[tsStreamIndex] = PES_PRIVATE_DATA1;
+        }
         else
         {
             m_pesType[tsStreamIndex] = PES_VIDEO_ID;
@@ -299,6 +303,11 @@ void TSMuxer::intAddStream(const std::string& streamName, const std::string& cod
     {
         m_pmt.pidList[tsStreamIndex] = PMTStreamInfo(StreamType::VIDEO_H266, tsStreamIndex, descrBuffer, descriptorLen,
                                                      codecReader, lang, isSecondary);
+    }
+    else if (codecName == "V_AV1")
+    {
+        m_pmt.pidList[tsStreamIndex] = PMTStreamInfo(StreamType::PRIVATE_DATA, tsStreamIndex, descrBuffer,
+                                                     descriptorLen, codecReader, lang, isSecondary);
     }
     else if (codecName == "V_MS/VFW/WVC1")
         m_pmt.pidList[tsStreamIndex] = PMTStreamInfo(StreamType::VIDEO_VC1, tsStreamIndex, descrBuffer, descriptorLen,

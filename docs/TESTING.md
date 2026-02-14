@@ -18,6 +18,23 @@ a239a724cba1381a5956b50cb8b46754  bbb-2mins.mkv
 62342b056d37e44fae4e48161d6208bf  bbb-2mins-from-linux-meta.m2ts
 ```
 
+### MKV Muxing Test
+
+You can also test muxing to MKV using the same Big Buck Bunny file. Use the MKV option in tsMuxerGUI or use the following meta file:
+
+```
+MUXOPT --vbr
+V_MPEG-2, "bbb-2mins.mkv", track=1, lang=und
+A_AC3, "bbb-2mins.mkv", track=2, lang=und
+```
+
+Save the output as `bbb-2mins-remuxed.mkv` and verify:
+1. The output file plays correctly in VLC or mpv
+2. Both the video and audio tracks are present (check with `mediainfo` or `ffprobe`)
+3. Seeking works correctly (the MKV file should have Cues for seeking)
+
+### Life Untouched Test
+
 We will have also done the same with the test file [Life Untouched](https://4kmedia.org/life-untouched-hdr-uhd-4k-demo). Results of the MD5 sums for the original and output file are below:
 ```
 f2db8f6647f4f2a0b2417aed296fee73  Life Untouched 4K Demo.mp4

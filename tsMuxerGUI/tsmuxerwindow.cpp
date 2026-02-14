@@ -94,13 +94,13 @@ QString fileDialogFilter()
     FileFilterVec filters = {
         {TsMuxerWindow::tr("All supported media files"),
          {"ac3",  "ddp", "ec3",   "eac3",  "aac",  "avc",    "mvc", "264", "h264", "hevc", "265",
-          "h265", "dts", "dtshd", "dtsma", "thd",  "truehd", "mpv", "m1v", "m2v",  "mpa",  "ts",
+          "h265", "obu", "dts", "dtshd", "dtsma", "thd",  "truehd", "mpv", "m1v", "m2v",  "mpa",  "ts",
           "m2ts", "mts", "ssif",  "mpg",   "mpeg", "vob",    "evo", "mkv", "mka",  "mks",  "mp4",
           "m4a",  "m4v", "mov",   "mpls",  "mpl",  "sup",    "srt", "wav", "w64",  "pcm"}},
         {TsMuxerWindow::tr("Container files (TS, MKV, MP4, MOV, etc.)"),
          {"ts", "m2ts", "mts", "ssif", "mpg", "mpeg", "vob", "evo", "mkv", "mka", "mks", "mp4", "m4a", "m4v", "mov"}},
         {TsMuxerWindow::tr("Video elementary streams"),
-         {"avc", "mvc", "264", "h264", "hevc", "265", "h265", "mpv", "m1v", "m2v"}},
+         {"avc", "mvc", "264", "h264", "hevc", "265", "h265", "obu", "mpv", "m1v", "m2v"}},
         {TsMuxerWindow::tr("Audio files"),
          {"ac3", "ddp", "ec3", "eac3", "aac", "dts", "dtshd", "dtsma", "thd", "truehd", "mpa", "wav", "w64", "pcm"}},
         {TsMuxerWindow::tr("Subtitle files"), {"sup", "srt"}},
@@ -109,13 +109,13 @@ QString fileDialogFilter()
     FileFilterVec filters = {
         {TsMuxerWindow::tr("All supported media files"),
          {"ac3",  "ddp",   "ec3",   "eac3", "aac",    "avc",     "mvc",     "264", "h264", "hevc", "265", "h265",
-          "dts",  "dtshd", "dtsma", "thd",  "truehd", "ac3+thd", "thd+ac3", "mpv", "m1v",  "m2v",  "mpa", "ts",
+          "obu",  "dts",  "dtshd", "dtsma", "thd",  "truehd", "ac3+thd", "thd+ac3", "mpv", "m1v",  "m2v",  "mpa", "ts",
           "m2ts", "mts",   "ssif",  "mpg",  "mpeg",   "vob",     "evo",     "mkv", "mka",  "mks",  "mp4", "m4a",
           "m4v",  "mov",   "mpls",  "mpl",  "sup",    "srt",     "wav",     "w64", "pcm"}},
         {TsMuxerWindow::tr("Container files (TS, MKV, MP4, MOV, etc.)"),
          {"ts", "m2ts", "mts", "ssif", "mpg", "mpeg", "vob", "evo", "mkv", "mka", "mks", "mp4", "m4a", "m4v", "mov"}},
         {TsMuxerWindow::tr("Video elementary streams"),
-         {"avc", "mvc", "264", "h264", "hevc", "265", "h265", "mpv", "m1v", "m2v"}},
+         {"avc", "mvc", "264", "h264", "hevc", "265", "h265", "obu", "mpv", "m1v", "m2v"}},
         {TsMuxerWindow::tr("Audio files"),
          {"ac3", "ddp", "ec3", "eac3", "aac", "dts", "dtshd", "dtsma", "thd", "truehd", "ac3+thd", "thd+ac3", "mpa",
           "wav", "w64", "pcm"}},
@@ -137,6 +137,8 @@ QString M2TS_SAVE_DIALOG_FILTER()
 }
 
 QString ISO_SAVE_DIALOG_FILTER() { return makeFileFilter({{TsMuxerWindow::tr("Disk image"), {"iso"}}}); }
+
+QString MKV_SAVE_DIALOG_FILTER() { return makeFileFilter({{TsMuxerWindow::tr("Matroska"), {"mkv", "mka"}}}); }
 
 QSettings* settings = nullptr;
 
@@ -185,7 +187,7 @@ QString unquoteStr(QString val)
 bool isVideoCodec(const QString& displayName)
 {
     return displayName == "H.264" || displayName == "MVC" || displayName == "VC-1" || displayName == "MPEG-2" ||
-           displayName == "HEVC" || displayName == "VVC";
+           displayName == "HEVC" || displayName == "VVC" || displayName == "AV1";
 }
 
 QString floatToTime(double time, char msSeparator = '.')
@@ -348,6 +350,8 @@ QString TsMuxerWindow::getDefaultOutputFileName() const
         return prefix + QString("default.ts");
     else if (ui->radioButtonM2TS->isChecked())
         return prefix + QString("default.m2ts");
+    else if (ui->radioButtonMKV->isChecked())
+        return prefix + QString("default.mkv");
     else if (ui->radioButtonBluRayISO->isChecked())
         return prefix + QString("default.iso");
     else
@@ -495,6 +499,7 @@ TsMuxerWindow::TsMuxerWindow()
     connect(ui->spinEditOffset, spinBoxValueChanged, this, &TsMuxerWindow::onSavedParamChanged);
     connect(ui->radioButtonTS, &QAbstractButton::clicked, this, &TsMuxerWindow::RadioButtonMuxClick);
     connect(ui->radioButtonM2TS, &QAbstractButton::clicked, this, &TsMuxerWindow::RadioButtonMuxClick);
+    connect(ui->radioButtonMKV, &QAbstractButton::clicked, this, &TsMuxerWindow::RadioButtonMuxClick);
     connect(ui->radioButtonBluRay, &QAbstractButton::clicked, this, &TsMuxerWindow::RadioButtonMuxClick);
     connect(ui->radioButtonBluRayISO, &QAbstractButton::clicked, this, &TsMuxerWindow::RadioButtonMuxClick);
     connect(ui->radioButtonAVCHD, &QAbstractButton::clicked, this, &TsMuxerWindow::RadioButtonMuxClick);
@@ -581,7 +586,8 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
                 codecInfo->addSPS = false;
             }
             */
-            if (codecInfo->displayName == "HEVC")
+            if (codecInfo->displayName == "HEVC" || codecInfo->displayName == "VVC" ||
+                codecInfo->displayName == "AV1")
                 ui->checkBoxV3->setChecked(true);
             else if (codecInfo->displayName == "H.264" || codecInfo->displayName == "MVC" ||
                      codecInfo->displayName == "MPEG-2" || codecInfo->displayName == "VC-1")
@@ -1184,6 +1190,8 @@ void TsMuxerWindow::modifyOutFileName(const QString fileName)
             ui->outFileName->setText(dstPath + QDir::separator() + name + ".ts");
         else if (ui->radioButtonM2TS->isChecked())
             ui->outFileName->setText(dstPath + QDir::separator() + name + ".m2ts");
+        else if (ui->radioButtonMKV->isChecked())
+            ui->outFileName->setText(dstPath + QDir::separator() + name + ".mkv");
         else if (ui->radioButtonBluRayISO->isChecked())
             ui->outFileName->setText(dstPath + QDir::separator() + name + ".iso");
         else
@@ -2371,6 +2379,11 @@ void TsMuxerWindow::RadioButtonMuxClick()
             ui->outFileName->setText(changeFileExt(ui->outFileName->text(), "ts"));
             mSaveDialogFilter = TS_SAVE_DIALOG_FILTER();
         }
+        else if (ui->radioButtonMKV->isChecked())
+        {
+            ui->outFileName->setText(changeFileExt(ui->outFileName->text(), "mkv"));
+            mSaveDialogFilter = MKV_SAVE_DIALOG_FILTER();
+        }
         else if (ui->radioButtonBluRayISO->isChecked())
         {
             ui->outFileName->setText(changeFileExt(ui->outFileName->text(), "iso"));
@@ -2405,6 +2418,8 @@ void TsMuxerWindow::outFileNameChanged()
 
     if (ext == "M2TS" || ext == "M2TS\"")
         ui->radioButtonM2TS->setChecked(true);
+    else if (ext == "MKV" || ext == "MKV\"" || ext == "MKA" || ext == "MKA\"")
+        ui->radioButtonMKV->setChecked(true);
     else if (ext == "ISO" || ext == "ISO\"")
     {
         ui->radioButtonBluRayISO->setChecked(true);

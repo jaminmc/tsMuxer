@@ -1359,6 +1359,10 @@ int MatroskaDemuxer::matroska_read_header()
             {
                 track->parsed_priv_data = new ParsedH266TrackData(track->codec_priv, track->codec_priv_size);
             }
+            else if (!strcmp(track->codec_id, MATROSKA_CODEC_ID_AV1) && (track->codec_priv != nullptr))
+            {
+                track->parsed_priv_data = new ParsedAV1TrackData(track->codec_priv, track->codec_priv_size);
+            }
             else if (!strcmp(track->codec_id, MATROSKA_CODEC_ID_VIDEO_VFW_FOURCC) && (track->codec_priv != nullptr))
             {
                 track->parsed_priv_data = new ParsedVC1TrackData(track->codec_priv, track->codec_priv_size);
@@ -2446,6 +2450,16 @@ int MatroskaDemuxer::simpleDemuxBlock(DemuxedData& demuxedData, const PIDSet& ac
 void MatroskaDemuxer::getTrackList(std::map<int32_t, TrackInfo>& trackList)
 {
     for (int i = 0; i < num_tracks; i++) trackList[i + 1] = TrackInfo(getTrackType(tracks[i]), tracks[i]->language, 0);
+}
+
+double MatroskaDemuxer::getTrackFps(const uint32_t trackId)
+{
+    if (trackId == 0 || static_cast<int>(trackId) > num_tracks)
+        return 0.0;
+    const MatroskaTrack* track = tracks[trackId - 1];
+    if (track->default_duration > 0)
+        return 1000000000.0 / static_cast<double>(track->default_duration);
+    return 0.0;
 }
 
 int MatroskaDemuxer::getTrackType(const MatroskaTrack* track)

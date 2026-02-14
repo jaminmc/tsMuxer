@@ -110,6 +110,10 @@ void SingleFileMuxer::intAddStream(const std::string& streamName, const std::str
         {
             fileExt = ".vvc";
         }
+        else if (codecName == "V_AV1")
+        {
+            fileExt = ".obu";
+        }
         else
         {
             fileExt = ".mpv";

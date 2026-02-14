@@ -6,10 +6,10 @@
 
 This project is for tsMuxer - a transport stream muxer for remuxing/muxing elementary streams. This is very useful for transcoding and this project is used in other products such as Universal Media Server.
 
-EVO/VOB/MPG, MKV/MKA, MP4/MOV, TS, M2TS to TS to M2TS.
+EVO/VOB/MPG, MKV/MKA, MP4/MOV, TS, M2TS to TS, M2TS, or MKV.
 
-Supported video codecs H.264/AVC, H.265/HEVC, H.266/VVC (Alpha release), VC-1, MPEG2. 
-Supported audio codecs AAC, AC3 / E-AC3(DD+), DTS/ DTS-HD - please note TrueHD must have the AC3 core intact.
+Supported video codecs H.264/AVC, H.265/HEVC, H.266/VVC (Alpha release), AV1, VC-1, MPEG2. 
+Supported audio codecs AAC, AC3 / E-AC3(DD+), DTS/ DTS-HD, TrueHD - please note TrueHD must have the AC3 core intact.
 
 Some of the major features include:
 
@@ -19,6 +19,7 @@ Some of the major features include:
 * Ability to extract DTS core from DTS-HD
 * Ability to join files
 * Output/Author to compliant Blu-ray Disc or AVCHD
+* Matroska (MKV/MKA) muxing support
 * Blu-ray 3D support
 
 ## Ethics
@@ -72,6 +73,7 @@ The following is a list of changes that will need to be made to the original sou
 * no Opus audio support
 * has issues with 24-bit DTS Express
 * issues with the 3D plane lists when there are mismatches between the MPLS and M2TS
+* AV1 in MPEG-TS playback depends on player/demuxer support for the AOM draft specification (not yet widely supported as of 2026)
 
 ## Contributing
 

@@ -22,6 +22,7 @@ static constexpr int CODEC_V_MPEG4_H264_DEP = 14;
 static constexpr int CODEC_V_MPEG4_H265 = 15;
 static constexpr int CODEC_V_MPEG4_H266 = 16;
 static constexpr int CODEC_A_MLP = 17;
+static constexpr int CODEC_V_AV1 = 18;
 
 struct CodecInfo
 {
@@ -70,5 +71,6 @@ const static CodecInfo mpegAudioCodecInfo(CODEC_A_MPEG_AUDIO, "MPEG-Audio", "A_M
 const static CodecInfo dvbSubCodecInfo(CODEC_S_SUP, "SUP", "S_SUP");
 const static CodecInfo pgsCodecInfo(CODEC_S_PGS, "PGS", "S_HDMV/PGS");
 const static CodecInfo srtCodecInfo(CODEC_S_SRT, "SRT", "S_TEXT/UTF8");
+const static CodecInfo av1CodecInfo(CODEC_V_AV1, "AV1", "V_AV1");
 
 #endif

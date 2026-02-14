@@ -62,6 +62,19 @@ endif()
 
 add_subdirectory(libmediation)
 add_subdirectory(tsMuxer)
+
+# Auto-detect Qt6 and enable the GUI by default if found
+if(NOT DEFINED TSMUXER_GUI)
+  find_package(Qt6 QUIET COMPONENTS Widgets)
+  if(Qt6_FOUND)
+    set(TSMUXER_GUI TRUE)
+    message(STATUS "Qt6 found - GUI will be built (disable with -DTSMUXER_GUI=OFF)")
+  else()
+    set(TSMUXER_GUI FALSE)
+    message(STATUS "Qt6 not found - GUI will not be built (install Qt6 or set -DTSMUXER_GUI=ON)")
+  endif()
+endif()
+
 if(TSMUXER_GUI)
   add_subdirectory(tsMuxerGUI)
 endif()

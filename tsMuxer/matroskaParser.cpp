@@ -246,6 +246,109 @@ bool ParsedH266TrackData::spsppsExists(uint8_t* buff, const int size)
     return vpsFound && spsFound && ppsFound;
 }
 
+// ------------ AV1 ---------------
+
+#include "av1.h"
+
+ParsedAV1TrackData::ParsedAV1TrackData(const uint8_t* buff, const int size) : m_firstExtract(true)
+{
+    // Parse AV1CodecConfigurationRecord from codec private data
+    // and extract config OBUs (Sequence Header, etc.) as start-code-prefixed buffers
+    m_configOBUs = av1_extract_priv_data(buff, size);
+}
+
+void ParsedAV1TrackData::extractData(AVPacket* pkt, uint8_t* buff, const int size)
+{
+    // AV1 in MKV uses "low overhead bitstream format":
+    // each OBU has a header with obu_has_size_field=1, followed by LEB128 size, then payload.
+    // We need to convert to start-code-prefixed format for MPEG-TS.
+
+    // First pass: calculate output size
+    const uint8_t* src = buff;
+    const uint8_t* end = buff + size;
+    size_t totalSize = 0;
+
+    // Add config OBU sizes if first extract
+    if (m_firstExtract)
+    {
+        for (const auto& obu : m_configOBUs) totalSize += obu.size();
+    }
+
+    // Estimate size for converted OBUs (start code + header + emulation overhead)
+    totalSize += size * 2 + 16;  // generous estimate for emulation prevention overhead
+
+    pkt->data = new uint8_t[totalSize];
+    uint8_t* dst = pkt->data;
+
+    // Insert config OBUs before first frame
+    if (m_firstExtract)
+    {
+        for (const auto& obu : m_configOBUs)
+        {
+            memcpy(dst, obu.data(), obu.size());
+            dst += obu.size();
+        }
+        m_firstExtract = false;
+    }
+
+    // Convert each OBU from low-overhead format to start-code format
+    src = buff;
+    while (src < end)
+    {
+        Av1ObuHeader obuHdr;
+        const int hdrLen = obuHdr.parse(src, end);
+        if (hdrLen < 0)
+            break;
+
+        if (!obuHdr.obu_has_size_field)
+        {
+            // Can't determine OBU boundaries without size field
+            break;
+        }
+
+        int leb128Bytes = 0;
+        const int64_t obuPayloadSize = decodeLeb128(src + hdrLen, end, leb128Bytes);
+        if (obuPayloadSize < 0)
+            break;
+
+        const uint8_t* payload = src + hdrLen + leb128Bytes;
+        if (payload + obuPayloadSize > end)
+            break;
+
+        // Skip temporal delimiter OBUs (not needed in TS start-code format,
+        // as they'll be added by the muxer if needed)
+
+        // Write start code
+        *dst++ = 0x00;
+        *dst++ = 0x00;
+        *dst++ = 0x01;
+
+        // Write OBU header byte(s) with obu_has_size_field cleared
+        *dst++ = src[0] & ~0x02;
+        if (obuHdr.obu_extension_flag)
+            *dst++ = src[1];
+
+        // Write payload with emulation prevention
+        if (obuPayloadSize > 0)
+        {
+            const int encoded =
+                av1_add_emulation_prevention(payload, payload + obuPayloadSize, dst, totalSize - (dst - pkt->data));
+            if (encoded > 0)
+                dst += encoded;
+            else
+            {
+                // Fallback: copy raw (shouldn't happen with proper buffer sizing)
+                memcpy(dst, payload, obuPayloadSize);
+                dst += obuPayloadSize;
+            }
+        }
+
+        src = payload + obuPayloadSize;
+    }
+
+    pkt->size = static_cast<int>(dst - pkt->data);
+}
+
 // ------------ VC-1 ---------------
 
 static constexpr int MS_BIT_MAP_HEADER_SIZE = 40;

@@ -14,6 +14,7 @@
 #include "hevc.h"
 #include "subTrackFilter.h"
 #include "vodCoreException.h"
+#include "av1.h"
 #include "vvc.h"
 
 using namespace std;
@@ -413,6 +414,105 @@ class MovParsedH266TrackData final : public MovParsedH264TrackData
     {
         spsPpsList = vvc_extract_priv_data(buff, size, &nal_length_size);
     }
+};
+
+class MovParsedAV1TrackData final : public ParsedTrackPrivData
+{
+   public:
+    MovParsedAV1TrackData(MovDemuxer* /*demuxer*/, MOVStreamContext* /*sc*/)
+        : m_firstExtract(true)
+    {
+    }
+
+    void setPrivData(uint8_t* buff, const int size) override
+    {
+        // Parse AV1CodecConfigurationRecord from av1C box
+        m_configOBUs = av1_extract_priv_data(buff, size);
+    }
+
+    void extractData(AVPacket* pkt, uint8_t* buff, const int size) override
+    {
+        // AV1 in MP4 uses low-overhead OBU format, same as MKV.
+        // Convert to start-code-prefixed format for TS output.
+
+        // Estimate output size
+        size_t configSize = 0;
+        if (m_firstExtract)
+        {
+            for (const auto& obu : m_configOBUs) configSize += obu.size();
+        }
+        const size_t totalSize = configSize + size * 2 + 16;
+
+        pkt->data = new uint8_t[totalSize];
+        uint8_t* dst = pkt->data;
+
+        // Insert config OBUs before first frame
+        if (m_firstExtract)
+        {
+            for (const auto& obu : m_configOBUs)
+            {
+                memcpy(dst, obu.data(), obu.size());
+                dst += obu.size();
+            }
+            m_firstExtract = false;
+        }
+
+        // Convert each OBU
+        const uint8_t* src = buff;
+        const uint8_t* end = buff + size;
+
+        while (src < end)
+        {
+            Av1ObuHeader obuHdr;
+            const int hdrLen = obuHdr.parse(src, end);
+            if (hdrLen < 0)
+                break;
+
+            if (!obuHdr.obu_has_size_field)
+                break;
+
+            int leb128Bytes = 0;
+            const int64_t obuPayloadSize = decodeLeb128(src + hdrLen, end, leb128Bytes);
+            if (obuPayloadSize < 0)
+                break;
+
+            const uint8_t* payload = src + hdrLen + leb128Bytes;
+            if (payload + obuPayloadSize > end)
+                break;
+
+            // Start code
+            *dst++ = 0x00;
+            *dst++ = 0x00;
+            *dst++ = 0x01;
+
+            // OBU header with obu_has_size_field cleared
+            *dst++ = src[0] & ~0x02;
+            if (obuHdr.obu_extension_flag)
+                *dst++ = src[1];
+
+            // Payload with emulation prevention
+            if (obuPayloadSize > 0)
+            {
+                const int encoded = av1_add_emulation_prevention(payload, payload + obuPayloadSize, dst,
+                                                                  totalSize - (dst - pkt->data));
+                if (encoded > 0)
+                    dst += encoded;
+                else
+                {
+                    memcpy(dst, payload, obuPayloadSize);
+                    dst += obuPayloadSize;
+                }
+            }
+
+            src = payload + obuPayloadSize;
+        }
+
+        pkt->size = static_cast<int>(dst - pkt->data);
+    }
+
+   private:
+    std::vector<std::vector<uint8_t>> m_configOBUs;
+    bool m_firstExtract;
 };
 
 class MovParsedSRTTrackData final : public ParsedTrackPrivData
@@ -910,6 +1010,7 @@ int MovDemuxer::ParseTableEntry(MOVAtom atom)
         return mov_read_extradata(atom);
     case MKTAG('f', 't', 'y', 'p'):
         return mov_read_ftyp(atom);
+    case MKTAG('a', 'v', '1', 'C'):
     case MKTAG('a', 'v', 'c', 'C'):
     case MKTAG('g', 'l', 'b', 'l'):
     case MKTAG('m', 'v', 'c', 'C'):
@@ -1450,6 +1551,10 @@ int MovDemuxer::mov_read_stsd(MOVAtom atom)
         case MKTAG('d', 'v', 'h', 'e'):
         case MKTAG('d', 'v', 'h', '1'):
             st->parsed_priv_data = new MovParsedH265TrackData(this, st);
+            st->type = IOContextTrackType::VIDEO;
+            break;
+        case MKTAG('a', 'v', '0', '1'):
+            st->parsed_priv_data = new MovParsedAV1TrackData(this, st);
             st->type = IOContextTrackType::VIDEO;
             break;
         case MKTAG('m', 'p', '4', 'a'):

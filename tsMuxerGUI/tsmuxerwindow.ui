@@ -2590,6 +2590,19 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item>
+             <widget class="QRadioButton" name="radioButtonMKV">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>MKV muxing</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QRadioButton" name="radioButtonBluRayISO">
               <property name="text">
                <string>Blu-ray ISO</string>
@@ -2882,9 +2895,10 @@ p, li { white-space: pre-wrap; }
   <tabstop>langComboBox</tabstop>
   <tabstop>dtsDwnConvert</tabstop>
   <tabstop>checkBoxKeepFps</tabstop>
-  <tabstop>radioButtonTS</tabstop>
-  <tabstop>radioButtonM2TS</tabstop>
-  <tabstop>radioButtonBluRay</tabstop>
+ <tabstop>radioButtonTS</tabstop>
+ <tabstop>radioButtonM2TS</tabstop>
+ <tabstop>radioButtonMKV</tabstop>
+ <tabstop>radioButtonBluRay</tabstop>
   <tabstop>radioButtonDemux</tabstop>
   <tabstop>outFileName</tabstop>
   <tabstop>btnBrowse</tabstop>

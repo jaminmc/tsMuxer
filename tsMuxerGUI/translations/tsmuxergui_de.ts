@@ -3171,6 +3171,11 @@
         <translation>Muxen in M2TS</translation>
     </message>
     <message>
+        <location filename="../tsmuxerwindow.ui" line="2604"/>
+        <source>MKV muxing</source>
+        <translation>Muxen in MKV</translation>
+    </message>
+    <message>
         <location filename="../tsmuxerwindow.ui" line="2595"/>
         <source>Blu-ray ISO</source>
         <translation>Blu-ray ISO</translation>
@@ -3278,6 +3283,11 @@
         <location filename="../tsmuxerwindow.cpp" line="97"/>
         <source>Transport Stream</source>
         <translation>Transportstream</translation>
+    </message>
+    <message>
+        <location filename="../tsmuxerwindow.cpp" line="141"/>
+        <source>Matroska</source>
+        <translation>Matroska</translation>
     </message>
     <message>
         <location filename="../tsmuxerwindow.cpp" line="69"/>
