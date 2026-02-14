@@ -326,7 +326,7 @@ void doTruncatedFile(const char* fileName, const int64_t offset)
 void showHelp()
 {
     constexpr char help[] = R"help(
-tsMuxeR is a simple program to mux video to TS/M2TS files or create BD disks.
+tsMuxeR is a simple program to mux video to TS/M2TS/MKV files or create BD disks.
 tsMuxeR does not use external filters (codecs).
 
 Examples:
@@ -372,13 +372,15 @@ Names of codecs in the meta file:
 - V_MPEG4/ISO/MVC   H.264/MVC
 - V_MS/VFW/WVC1     VC1
 - V_MPEG-2          MPEG2
+- V_AV1             AV1
 - A_AC3             AC3/AC3+/TRUE-HD
+- A_MLP             TRUE-HD (standalone TrueHD stream)
 - A_AAC             AAC
 - A_DTS             DTS/DTS-Express/DTS-HD
 - A_MP3             MPEG audio layer 1/2/3
 - A_LPCM            raw pcm data or PCM WAV file
 - S_HDMV/PGS        Presentation graphic stream (BD subtitle format)
-- S_TEXT/UTF8       SRT subtitle format.  Encoding MUST be  UTF-8/UTF-16/UTF-32
+- S_TEXT/UTF8        SRT subtitle format. Encoding MUST be UTF-8/UTF-16/UTF-32
 
 Each track may have additional parameters. Track parameters do not have dashes.
 If a parameter's value consists of several words, it must be enclosed in quotes.
@@ -394,11 +396,15 @@ Additional parameters for audio tracks:
 - down-to-ac3       Available only for TRUE-HD tracks. Filter out HD part.
 - secondary         Mux as secondary audio. Available for DD+ and DTS-Express.
 - default           Mark this track as the default when muxing to Blu-ray.
+- stretch           Stretch audio by a given factor. Can be a decimal value or a
+                    fraction (e.g. 25/24). Useful for fixing A/V sync issues
+                    caused by frame rate discrepancies.
 
 Additional parameters for video tracks:
 - fps               The number of frames per second. If not defined, the value
-                    is auto detected if available in the source stream. If not,
-                    it defaults to 23.976.
+                    is auto detected from the source stream or container
+                    metadata (e.g. MKV default_duration, MP4 timescale). If
+                    neither source is available, it defaults to 23.976.
 - delPulldown       Remove pulldown from the track, if it exists. If the
                     pulldown is present, the FPS value is changed from 30 to 24.
 - ar                Override video aspect ratio. 16:9, 4:3 e.t.c.
@@ -455,7 +461,9 @@ Additional parameters for SRT tracks:
 - font-italic       Italic display text.
 - font-bold         Bold display text.
 - font-underline    Underlined text.
-- font-strikeout    Strikethrough text.
+- font-strike-out   Strikethrough text.
+- font-charset      Font character set (numeric). Allows selection of a specific
+                    character set for font rendering.
 - bottom-offset     Distance from the lower edge while displaying text.
 - font-border       Outline width.
 - fadein-time       Time in ms for smooth subtitle appearance.
@@ -480,13 +488,16 @@ All parameters in this group start with two dashes:
                       DTS-HD. Activated automatically for BD muxing.
 --no-hdmv-descriptors Use ITU-T H.222.0 | ISO/IEC 13818-1 descriptors instead of
                       HDMV descriptors. Not activated for BD or AVCHD muxing.
---vbr                 Use variable bitrate.
+--vbr                 Use variable bitrate. This is the default mode.
 --minbitrate          Sets the lower limit of the VBR bitrate. If the stream has
-                      a smaller bitrate, nullptr packets will be inserted to
+                      a smaller bitrate, null packets will be inserted to
                       compensate.
---maxbitrate          The upper limit of the vbr bitrate.
+--maxbitrate          The upper limit of the VBR bitrate.
 --cbr                 Muxing mode with a fixed bitrate. --vbr and --cbr must not
                       be used together.
+--bitrate             Set a fixed bitrate in Mbps (e.g. --bitrate=35). This sets
+                      both the minimum and maximum bitrate to the same value,
+                      enabling CBR mode.
 --vbv-len             The  length  of the  virtual  buffer  in milliseconds.  The
                       default value  is 500.  Typically, this  option  is used
                       together with --cbr. The parameter is similar to  the value

@@ -98,6 +98,7 @@ down-to-dts       | Available only for DTS-HD tracks. Filter out HD part.
 down-to-ac3       | Available only for TRUE-HD tracks. Filter out HD part. 
 secondary         | Mux as secondary audio.  Available for DD+ and DTS-Express. 
 default           | Mark this track as the default when muxing to Blu-ray.
+stretch           | Stretch audio by a given factor. Can be a decimal value or a fraction (e.g. 25/24). Useful for fixing A/V sync issues caused by frame rate discrepancies.
 
 Additional parameters for video tracks:
 
@@ -143,8 +144,9 @@ font-size         | Font size in pixels.
 font-italic       | Italic display text. 
 font-bold         | Bold display text. 
 font-underline    | Underlined text. 
-font-strikeout    | Strikethrough text. 
-bottom-offset     | Distance from the lower edge while displaying text. 
+font-strike-out   | Strikethrough text.
+font-charset      | Font character set (numeric). Allows selection of a specific character set for font rendering.
+bottom-offset     | Distance from the lower edge while displaying text.
 font-border       | Outline width. 
 fadein-time       | Time in ms for smooth subtitle appearance. 
 fadeout-time      | Time in ms for smooth subtitle disappearance. 
@@ -163,12 +165,14 @@ Global additional parameters are placed in the first line of the META file, whic
 
 Parameter           | Description 
 ---                 | --- 
---pcr-on-video-pid  | Do not allocate a separate PID for PCR and use the existing video PID. 
+--no-pcr-on-video-pid | Allocate a separate PID for PCR and do not use the existing video PID. 
 --new-audio-pes     | Use bytes 0xfd instead of 0xbd for AC3, True-HD, DTS and DTS-HD. Activated automatically for BD muxing. 
---vbr               | Use variable bitrate.
+--no-hdmv-descriptors | Use ITU-T H.222.0 / ISO/IEC 13818-1 descriptors instead of HDMV descriptors. Not activated for BD or AVCHD muxing.
+--vbr               | Use variable bitrate. This is the default mode.
 --minbitrate        | Sets the lower limit of the VBR bitrate. If the stream has a smaller bitrate, NULL packets will be inserted to compensate. 
 --maxbitrate        | The upper limit of the vbr bitrate.
 --cbr               | Muxing mode with a fixed bitrate. --vbr and --cbr must not be used together. 
+--bitrate           | Set a fixed bitrate in Mbps (e.g. --bitrate=35). This sets both the minimum and maximum bitrate to the same value, enabling CBR mode.
 --vbv-len           | The  length  of the  virtual  buffer  in milliseconds.  The default value  is 500.  Typically, this  option  is used together with --cbr. The parameter is similar to  the value of  vbv-buffer-size  in  the  x264  codec,  but  defined in milliseconds instead of kbit. 
 --no-asyncio        | Do not  create  a separate thread  for writing. This option also disables the FILE_FLAG_NO_BUFFERING flag on Windows when writing. This option is deprecated. 
 --auto-chapters     | Insert a chapter every <n> minutes. Used only in BD/AVCHD mode. 
