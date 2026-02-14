@@ -27,7 +27,6 @@ class MPEGStreamReader : public AbstractStreamReader
         m_pcrIncPerFrame = m_pcrIncPerField = 0;
         m_longCodesAllowed = true;
         m_removePulldown = false;
-        // m_firstPulldownWarn = true;
         m_pulldownWarnCnt = 1;
         m_testPulldownDts = 0;
         m_streamAR = m_ar = VideoAspectRatio::AR_KEEP_DEFAULT;
@@ -83,18 +82,15 @@ class MPEGStreamReader : public AbstractStreamReader
 
     virtual bool skipNal(uint8_t* nal) { return false; }
 
-    // virtual CodecInfo getCodecInfo() = 0;
     virtual int intDecodeNAL(uint8_t* buff) = 0;
-    // static int bufFromNAL(const uint8_t* buff, const uint8_t* bufEnd, bool longCodesAllowed);
     bool m_longCodesAllowed;
     bool m_removePulldown;
     int64_t m_testPulldownDts;
     void checkPulldownSync();
     uint8_t* m_tmpBuffer;
     bool m_spsPpsFound;
-    // std::vector<uint8_t*> m_skippedNal;
+
    private:
-    // bool m_firstPulldownWarn;
     int64_t m_pulldownWarnCnt;
     long m_lastDecodeOffset;
     bool m_syncToStream;

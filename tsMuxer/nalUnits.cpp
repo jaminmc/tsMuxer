@@ -341,9 +341,8 @@ int PPSUnit::deserialize()
         m_ready = true;
         return 0;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -372,20 +371,19 @@ void HRDParams::resetDefault(const bool mvc)
     bit_rate_value_minus1.resize(1);
     cpb_size_value_minus1.resize(1);
 
-    // todo: implement different parameters for MVC and AVC here
+    // AVC and MVC use different HRD parameters per the Blu-ray spec.
     if (!mvc)
     {
         bit_rate_scale = 3;
         cpb_size_scale = 3;
-        bit_rate_value_minus1[0] = 78124;  // 78124*512 = 40 mbit. It is max allowed value for Blu-ray disks
-        cpb_size_value_minus1[0] =
-            234374;  // 234374*128 = 30 mbit per frame max. It is max allowed value for Blu-ray disks
+        bit_rate_value_minus1[0] = 78124;   // (78124+1)*2^(3+6)  = 40 Mbit/s max for Blu-ray AVC
+        cpb_size_value_minus1[0] = 234374;  // (234374+1)*2^(3+4) = 30 Mbit CPB size max for Blu-ray AVC
     }
     else
     {
         bit_rate_scale = 2;
         cpb_size_scale = 3;
-        bit_rate_value_minus1[0] = 234374;  // 60 mbit for MVC+AVC It is max allowed value for Blu-ray disks
+        bit_rate_value_minus1[0] = 234374;  // 60 Mbit/s max for Blu-ray MVC+AVC
         cpb_size_value_minus1[0] = 468749;
     }
 }
@@ -561,9 +559,8 @@ int SPSUnit::deserialize()
 
         return 0;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -1214,9 +1211,8 @@ int SliceUnit::deserializeSliceType(uint8_t* buffer, uint8_t* end)
 
         return 0;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 };
@@ -1249,9 +1245,8 @@ int SliceUnit::deserialize(uint8_t* buffer, uint8_t* end, const std::map<uint32_
         return rez;
         // return deserializeSliceData();
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -1368,9 +1363,8 @@ void SEIUnit::deserialize(const SPSUnit& sps, const int orig_hrd_parameters_pres
             curBuff += payloadSize;
         }
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         LTRACE(LT_WARN, 2, "Bad SEI detected. SEI too short");
     }
 }
@@ -1408,9 +1402,8 @@ int SEIUnit::isMVCSEI()
             curBuff += payloadSize;
         }
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
     }
     return 0;
 }

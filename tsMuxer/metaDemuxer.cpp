@@ -10,6 +10,7 @@
 
 #include "aacStreamReader.h"
 #include "ac3StreamReader.h"
+#include "av1StreamReader.h"
 #include "bufferedReaderManager.h"
 #include "combinedH264Demuxer.h"
 #include "dtsStreamReader.h"
@@ -31,7 +32,6 @@
 #include "vc1StreamReader.h"
 #include "vodCoreException.h"
 #include "vod_common.h"
-#include "av1StreamReader.h"
 #include "vvcStreamReader.h"
 
 using namespace std;
@@ -1265,7 +1265,6 @@ void METADemuxer::lineBack()
 // ------------------- StreamInfo ---------------------
 int StreamInfo::read()
 {
-    // m_readRez = 0;
     int readRez = 0;
     if (m_asyncMode && !m_notificated && !m_isEOF)
     {

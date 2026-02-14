@@ -69,8 +69,10 @@ File::File(const char* fName, unsigned int oflag, unsigned int systemDependentFl
 
 File::~File()
 {
+    // Use qualified call to bypass virtual dispatch, ensuring File::close()
+    // is called even if a derived class overrides close().
     if (isOpen())
-        close();
+        File::close();
 }
 
 bool File::open(const char* fName, unsigned int oflag, unsigned int systemDependentFlags)

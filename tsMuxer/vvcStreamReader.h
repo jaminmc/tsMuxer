@@ -10,6 +10,7 @@
 class VVCStreamReader final : public MPEGStreamReader
 {
     friend class MatroskaMuxer;
+
    public:
     VVCStreamReader();
     ~VVCStreamReader() override;

@@ -10,6 +10,7 @@
 class HEVCStreamReader final : public MPEGStreamReader
 {
     friend class MatroskaMuxer;
+
    public:
     HEVCStreamReader();
     ~HEVCStreamReader() override;

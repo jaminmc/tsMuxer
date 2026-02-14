@@ -138,7 +138,9 @@ class AbstractDemuxer
    protected:
     int64_t m_timeOffset;
     uint32_t m_fileBlockSize;
-    PIDFilters m_pidFilters;  // todo: refactor in case if several pidFilters required (>1 3D tracks)
+    // Maps PID -> SubTrackFilter. Currently supports one filter per PID; extending to
+    // multiple filters per PID would be needed to handle more than one 3D subtitle track.
+    PIDFilters m_pidFilters;
 };
 
 #endif

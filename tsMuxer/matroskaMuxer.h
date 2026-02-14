@@ -61,12 +61,12 @@ class MatroskaMuxer final : public AbstractMuxer
     // ── Track information collected during intAddStream ──
     struct MkvTrackInfo
     {
-        int streamIndex;                     // external stream index
-        int trackNumber;                     // 1-based Matroska track number
-        uint64_t trackUID;                   // random UID
-        std::string matroskaCodecID;         // e.g. "V_MPEG4/ISO/AVC"
-        int codecID;                         // internal CODEC_* constant
-        uint8_t trackType;                   // 1=video, 2=audio, 17=subtitle
+        int streamIndex;              // external stream index
+        int trackNumber;              // 1-based Matroska track number
+        uint64_t trackUID;            // random UID
+        std::string matroskaCodecID;  // e.g. "V_MPEG4/ISO/AVC"
+        int codecID;                  // internal CODEC_* constant
+        uint8_t trackType;            // 1=video, 2=audio, 17=subtitle
         AbstractStreamReader* codecReader;
 
         // Video-specific
@@ -117,7 +117,7 @@ class MatroskaMuxer final : public AbstractMuxer
     // ── Cue point for building the Cues element at close ──
     struct CueEntry
     {
-        int64_t timecodeMs;     // cluster-relative time in ms
+        int64_t timecodeMs;  // cluster-relative time in ms
         int trackNumber;
         int64_t clusterOffset;  // byte offset of the cluster from segment data start
     };
@@ -170,15 +170,15 @@ class MatroskaMuxer final : public AbstractMuxer
     int m_nextTrackNumber;
 
     // Segment layout
-    int64_t m_segmentStartPos;    // file position of the first byte after the Segment header
-    int64_t m_segmentSizePos;     // file position where the segment's VINT size is written
+    int64_t m_segmentStartPos;  // file position of the first byte after the Segment header
+    int64_t m_segmentSizePos;   // file position where the segment's VINT size is written
 
     // Cluster buffering
-    std::vector<uint8_t> m_clusterBuf;      // current cluster data
-    int64_t m_clusterTimecodeMs;             // timecode of current cluster in ms
-    int64_t m_clusterStartFilePos;           // file offset where current cluster begins
+    std::vector<uint8_t> m_clusterBuf;  // current cluster data
+    int64_t m_clusterTimecodeMs;        // timecode of current cluster in ms
+    int64_t m_clusterStartFilePos;      // file offset where current cluster begins
     bool m_clusterOpen;
-    int64_t m_clusterDataSize;               // data written in current cluster
+    int64_t m_clusterDataSize;  // data written in current cluster
 
     // Cue tracking
     std::vector<CueEntry> m_cueEntries;
@@ -229,7 +229,7 @@ class MatroskaMuxer final : public AbstractMuxer
     static std::vector<uint8_t> convertAnnexBToLengthPrefixed(const uint8_t* data, int size);
 
     // Cluster splitting thresholds
-    static constexpr int64_t CLUSTER_MAX_DURATION_MS = 5000;  // 5 seconds
+    static constexpr int64_t CLUSTER_MAX_DURATION_MS = 5000;      // 5 seconds
     static constexpr int64_t CLUSTER_MAX_SIZE = 5 * 1024 * 1024;  // 5 MB
 };
 

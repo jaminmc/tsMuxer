@@ -194,7 +194,7 @@ bool Av1SequenceHeader::parseColorConfig(BitStreamReader& reader)
         }
         else
         {
-            color_primaries = 2;       // CP_UNSPECIFIED
+            color_primaries = 2;  // CP_UNSPECIFIED
             transfer_characteristics = 2;
             matrix_coefficients = 2;
         }
@@ -437,7 +437,10 @@ int Av1SequenceHeader::deserialize(const uint8_t* buf, const int size)
 // Av1FrameHeader
 // ---------------------------------------------------------------------------
 
-Av1FrameHeader::Av1FrameHeader() : show_existing_frame(false), frame_type(Av1FrameType::KEY_FRAME), show_frame(true), frame_to_show_map_idx(0) {}
+Av1FrameHeader::Av1FrameHeader()
+    : show_existing_frame(false), frame_type(Av1FrameType::KEY_FRAME), show_frame(true), frame_to_show_map_idx(0)
+{
+}
 
 int Av1FrameHeader::deserialize(const uint8_t* buf, const int size, const Av1SequenceHeader& seqHdr)
 {
@@ -556,8 +559,8 @@ std::vector<std::vector<uint8_t>> av1_extract_priv_data(const uint8_t* buff, con
             // Add emulation prevention to payload
             const size_t maxEncoded = obuPayloadSize * 2 + 16;
             auto tmpBuf = std::make_unique<uint8_t[]>(maxEncoded);
-            const int encodedLen = av1_add_emulation_prevention(payloadStart, payloadStart + obuPayloadSize,
-                                                                 tmpBuf.get(), maxEncoded);
+            const int encodedLen =
+                av1_add_emulation_prevention(payloadStart, payloadStart + obuPayloadSize, tmpBuf.get(), maxEncoded);
             if (encodedLen > 0)
             {
                 obu.insert(obu.end(), tmpBuf.get(), tmpBuf.get() + encodedLen);

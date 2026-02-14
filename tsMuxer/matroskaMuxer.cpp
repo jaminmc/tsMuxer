@@ -50,8 +50,7 @@ int ebml_id_size(uint32_t id)
 int ebml_write_id(uint8_t* dst, const uint32_t id)
 {
     const int len = ebml_id_size(id);
-    for (int i = len - 1; i >= 0; --i)
-        dst[len - 1 - i] = static_cast<uint8_t>((id >> (i * 8)) & 0xFF);
+    for (int i = len - 1; i >= 0; --i) dst[len - 1 - i] = static_cast<uint8_t>((id >> (i * 8)) & 0xFF);
     return len;
 }
 
@@ -74,16 +73,12 @@ int ebml_size_size(uint64_t size)
     return 8;
 }
 
-int ebml_write_size(uint8_t* dst, uint64_t size)
-{
-    return ebml_write_size_fixed(dst, size, ebml_size_size(size));
-}
+int ebml_write_size(uint8_t* dst, uint64_t size) { return ebml_write_size_fixed(dst, size, ebml_size_size(size)); }
 
 int ebml_write_size_fixed(uint8_t* dst, uint64_t size, const int bytes)
 {
     // The leading byte has the VINT_MARKER at position (8 - bytes) from MSB
-    for (int i = bytes - 1; i >= 0; --i)
-        dst[bytes - 1 - i] = static_cast<uint8_t>((size >> (i * 8)) & 0xFF);
+    for (int i = bytes - 1; i >= 0; --i) dst[bytes - 1 - i] = static_cast<uint8_t>((size >> (i * 8)) & 0xFF);
     dst[0] |= static_cast<uint8_t>(1 << (8 - bytes));  // set VINT_MARKER
     return bytes;
 }
@@ -94,8 +89,7 @@ int ebml_write_unknown_size(uint8_t* dst, const int bytes)
     // in bit (8-n) and all data bits set to 1.  Remaining bytes are all 0xFF.
     // e.g. 1-byte: 0xFF, 2-byte: 0x7F FF, 8-byte: 0x01 FF FF FF FF FF FF FF
     dst[0] = static_cast<uint8_t>(0xFF >> (bytes - 1));
-    for (int i = 1; i < bytes; i++)
-        dst[i] = 0xFF;
+    for (int i = 1; i < bytes; i++) dst[i] = 0xFF;
     return bytes;
 }
 
@@ -131,8 +125,7 @@ int ebml_write_uint(uint8_t* dst, const uint32_t id, uint64_t value)
     int pos = ebml_write_id(dst, id);
     const int valSize = uint_size(value);
     pos += ebml_write_size(dst + pos, valSize);
-    for (int i = valSize - 1; i >= 0; --i)
-        dst[pos++] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
+    for (int i = valSize - 1; i >= 0; --i) dst[pos++] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
     return pos;
 }
 
@@ -141,8 +134,7 @@ int ebml_write_sint(uint8_t* dst, const uint32_t id, int64_t value)
     int pos = ebml_write_id(dst, id);
     const int valSize = sint_size(value);
     pos += ebml_write_size(dst + pos, valSize);
-    for (int i = valSize - 1; i >= 0; --i)
-        dst[pos++] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
+    for (int i = valSize - 1; i >= 0; --i) dst[pos++] = static_cast<uint8_t>((value >> (i * 8)) & 0xFF);
     return pos;
 }
 
@@ -153,8 +145,7 @@ int ebml_write_float(uint8_t* dst, const uint32_t id, double value)
     // Write 64-bit IEEE 754 big-endian
     uint64_t bits;
     memcpy(&bits, &value, 8);
-    for (int i = 7; i >= 0; --i)
-        dst[pos++] = static_cast<uint8_t>((bits >> (i * 8)) & 0xFF);
+    for (int i = 7; i >= 0; --i) dst[pos++] = static_cast<uint8_t>((bits >> (i * 8)) & 0xFF);
     return pos;
 }
 
@@ -340,11 +331,11 @@ std::vector<uint8_t> MatroskaMuxer::buildAVCDecoderConfigRecord(AbstractStreamRe
     uint8_t levelIdc = firstSps.size() > 3 ? firstSps[3] : 30;
 
     std::vector<uint8_t> record;
-    record.push_back(1);              // configurationVersion
+    record.push_back(1);  // configurationVersion
     record.push_back(profileIdc);
     record.push_back(profileCompat);
     record.push_back(levelIdc);
-    record.push_back(0xFF);           // lengthSizeMinusOne = 3 (4-byte NAL length) | reserved 0xFC
+    record.push_back(0xFF);  // lengthSizeMinusOne = 3 (4-byte NAL length) | reserved 0xFC
     record.push_back(static_cast<uint8_t>(0xE0 | (spsUnits.size() & 0x1F)));  // numSPS | reserved 0xE0
 
     for (auto& [data, id] : spsUnits)
@@ -403,11 +394,9 @@ std::vector<uint8_t> MatroskaMuxer::buildHEVCDecoderConfigRecord(AbstractStreamR
     // general_profile_space(2) | general_tier_flag(1) | general_profile_idc(5)
     record.push_back(static_cast<uint8_t>(sps->profile_idc & 0x1F));
     // general_profile_compatibility_flags (4 bytes)
-    for (int i = 0; i < 4; i++)
-        record.push_back(0);
+    for (int i = 0; i < 4; i++) record.push_back(0);
     // general_constraint_indicator_flags (6 bytes)
-    for (int i = 0; i < 6; i++)
-        record.push_back(0);
+    for (int i = 0; i < 6; i++) record.push_back(0);
     // general_level_idc
     record.push_back(static_cast<uint8_t>(sps->level_idc));
     // min_spatial_segmentation_idc
@@ -537,8 +526,8 @@ std::vector<uint8_t> MatroskaMuxer::buildAV1ConfigRecord(AbstractStreamReader* r
     const uint8_t highBitdepth = (bitDepth > 8) ? 1 : 0;
     const uint8_t twelveBit = (bitDepth == 12) ? 1 : 0;
     record.push_back(static_cast<uint8_t>((0 << 7) |             // seq_tier_0
-                                          (highBitdepth << 6) |   // high_bitdepth
-                                          (twelveBit << 5) |      // twelve_bit
+                                          (highBitdepth << 6) |  // high_bitdepth
+                                          (twelveBit << 5) |     // twelve_bit
                                           (hdr.mono_chrome << 4) | (hdr.chroma_subsampling_x << 3) |
                                           (hdr.chroma_subsampling_y << 2) | (hdr.chroma_sample_position & 0x03)));
     // initial_presentation_delay_present(1) | reserved/initial_presentation_delay_minus_one(3) | padding(4)
@@ -704,8 +693,7 @@ std::vector<uint8_t> MatroskaMuxer::buildTrackEntry(const MkvTrackInfo& track)
             vPos += ebml_write_uint(videoBuf + vPos, MATROSKA_ID_VIDEOFLAGINTERLACED, 1);
 
         // Write DisplayWidth / DisplayHeight for non-square-pixel content
-        if (track.streamAR != VideoAspectRatio::AR_KEEP_DEFAULT &&
-            track.streamAR != VideoAspectRatio::AR_VGA)
+        if (track.streamAR != VideoAspectRatio::AR_KEEP_DEFAULT && track.streamAR != VideoAspectRatio::AR_VGA)
         {
             unsigned displayWidth = track.width;
             unsigned displayHeight = track.height;
@@ -741,8 +729,7 @@ std::vector<uint8_t> MatroskaMuxer::buildTrackEntry(const MkvTrackInfo& track)
     {
         uint8_t audioBuf[128];
         int aPos = 0;
-        aPos += ebml_write_float(audioBuf + aPos, MATROSKA_ID_AUDIOSAMPLINGFREQ,
-                                 static_cast<double>(track.sampleRate));
+        aPos += ebml_write_float(audioBuf + aPos, MATROSKA_ID_AUDIOSAMPLINGFREQ, static_cast<double>(track.sampleRate));
         aPos += ebml_write_uint(audioBuf + aPos, MATROSKA_ID_AUDIOCHANNELS, track.channels);
         if (track.bitDepth > 0)
             aPos += ebml_write_uint(audioBuf + aPos, MATROSKA_ID_AUDIOBITDEPTH, track.bitDepth);
@@ -846,8 +833,7 @@ void MatroskaMuxer::writeDeferredHeader()
     refreshTrackProperties();
 
     // Build codec private data for all tracks
-    for (auto& [streamIdx, track] : m_tracks)
-        buildCodecPrivate(track);
+    for (auto& [streamIdx, track] : m_tracks) buildCodecPrivate(track);
 
     // Write SegmentInfo
     writeSegmentInfo();
@@ -866,8 +852,7 @@ void MatroskaMuxer::replayBufferedPackets()
     // Determine the minimum PTS across all buffered packets so that no track
     // produces negative relative timestamps.
     int64_t minPts = m_preHeaderPackets[0].pts;
-    for (const auto& pkt : m_preHeaderPackets)
-        minPts = std::min(minPts, pkt.pts);
+    for (const auto& pkt : m_preHeaderPackets) minPts = std::min(minPts, pkt.pts);
 
     m_firstTimecode = minPts;
     m_firstTimecodeSet = true;
@@ -942,8 +927,7 @@ std::vector<uint8_t> MatroskaMuxer::convertAV1ToLowOverhead(const uint8_t* data,
         // OBU payload runs from curObu+hdrLen to nextStartCode
         // Trim trailing zero bytes (they're part of the start code prefix, not the OBU)
         uint8_t* obuPayloadEnd = nextStartCode;
-        while (obuPayloadEnd > curObu + hdrLen && obuPayloadEnd[-1] == 0)
-            obuPayloadEnd--;
+        while (obuPayloadEnd > curObu + hdrLen && obuPayloadEnd[-1] == 0) obuPayloadEnd--;
 
         const uint8_t* payload = curObu + hdrLen;
         const int payloadWithEPLen = static_cast<int>(obuPayloadEnd - payload);
@@ -952,8 +936,8 @@ std::vector<uint8_t> MatroskaMuxer::convertAV1ToLowOverhead(const uint8_t* data,
         int rawPayloadLen = 0;
         if (payloadWithEPLen > 0)
         {
-            rawPayloadLen = av1_remove_emulation_prevention(payload, payload + payloadWithEPLen, rawBuf.data(),
-                                                            rawBuf.size());
+            rawPayloadLen =
+                av1_remove_emulation_prevention(payload, payload + payloadWithEPLen, rawBuf.data(), rawBuf.size());
             if (rawPayloadLen < 0)
             {
                 // Fallback: use payload as-is
@@ -1012,8 +996,7 @@ std::vector<uint8_t> MatroskaMuxer::convertAnnexBToLengthPrefixed(const uint8_t*
         if (nextNal < end)
         {
             // Back up past the trailing zeros that are part of the next start code
-            while (naluEnd > curPos && naluEnd[-1] == 0)
-                naluEnd--;
+            while (naluEnd > curPos && naluEnd[-1] == 0) naluEnd--;
         }
 
         const int naluSize = static_cast<int>(naluEnd - curPos);
@@ -1094,11 +1077,10 @@ void MatroskaMuxer::flushPendingFrame(MkvTrackInfo& track)
     const int64_t relMs = (track.pendingPts - m_firstTimecode) / INTERNAL_PTS_PER_MS;
 
     // Decide whether to start a new cluster
-    const bool needNewCluster =
-        !m_clusterOpen || (relMs - m_clusterTimecodeMs >= CLUSTER_MAX_DURATION_MS) ||
-        (m_clusterDataSize >= CLUSTER_MAX_SIZE) ||
-        (track.trackType == 1 && (track.pendingFlags & AVPacket::IS_IFRAME) && m_clusterOpen &&
-         (relMs - m_clusterTimecodeMs >= 1000));
+    const bool needNewCluster = !m_clusterOpen || (relMs - m_clusterTimecodeMs >= CLUSTER_MAX_DURATION_MS) ||
+                                (m_clusterDataSize >= CLUSTER_MAX_SIZE) ||
+                                (track.trackType == 1 && (track.pendingFlags & AVPacket::IS_IFRAME) && m_clusterOpen &&
+                                 (relMs - m_clusterTimecodeMs >= 1000));
 
     if (needNewCluster)
         startCluster(relMs);
@@ -1220,8 +1202,7 @@ bool MatroskaMuxer::muxPacketInternal(AVPacket& avPacket)
 bool MatroskaMuxer::doFlush()
 {
     // Flush all pending accumulated frames
-    for (auto& [streamIdx, track] : m_tracks)
-        flushPendingFrame(track);
+    for (auto& [streamIdx, track] : m_tracks) flushPendingFrame(track);
 
     flushCluster();
     return true;
@@ -1334,8 +1315,7 @@ bool MatroskaMuxer::close()
     }
 
     // Flush any pending accumulated frames for all tracks
-    for (auto& [streamIdx, track] : m_tracks)
-        flushPendingFrame(track);
+    for (auto& [streamIdx, track] : m_tracks) flushPendingFrame(track);
 
     // Flush any remaining cluster data
     flushCluster();

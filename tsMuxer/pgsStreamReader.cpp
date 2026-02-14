@@ -667,9 +667,8 @@ int PGSStreamReader::readPacket(AVPacket& avPacket)
             break;
         }
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NEED_MORE_DATA;
     }
     avPacket.pts = m_lastPTS;

@@ -9,12 +9,12 @@
 
 #include "aac.h"
 #include "abstractStreamReader.h"
+#include "av1.h"
 #include "avPacket.h"
 #include "bitStream.h"
 #include "hevc.h"
 #include "subTrackFilter.h"
 #include "vodCoreException.h"
-#include "av1.h"
 #include "vvc.h"
 
 using namespace std;
@@ -337,8 +337,9 @@ class MovParsedH264TrackData : public ParsedTrackPrivData
 
         if (nal_length_size < 1 || nal_length_size > 4)
         {
-            LTRACE(LT_WARN, 2, "MP4/MOV: invalid nal_length_size " << static_cast<int>(nal_length_size)
-                                                                    << ", using conservative estimate");
+            LTRACE(LT_WARN, 2,
+                   "MP4/MOV: invalid nal_length_size " << static_cast<int>(nal_length_size)
+                                                       << ", using conservative estimate");
             return size * 2;
         }
 
@@ -349,8 +350,9 @@ class MovParsedH264TrackData : public ParsedTrackPrivData
         {
             if (cur + nal_length_size > end)
             {
-                LTRACE(LT_WARN, 2, "MP4/MOV: truncated NAL length field at position " << m_demuxer->getProcessedBytes()
-                                                                                       << ", stopping parse");
+                LTRACE(LT_WARN, 2,
+                       "MP4/MOV: truncated NAL length field at position " << m_demuxer->getProcessedBytes()
+                                                                          << ", stopping parse");
                 break;
             }
             const uint32_t nalSize = getNalSize(cur);
@@ -363,8 +365,9 @@ class MovParsedH264TrackData : public ParsedTrackPrivData
             }
             if (cur + nalSize > end)
             {
-                LTRACE(LT_WARN, 2, "MP4/MOV: NAL size " << nalSize << " exceeds frame boundary at position "
-                                                         << m_demuxer->getProcessedBytes());
+                LTRACE(LT_WARN, 2,
+                       "MP4/MOV: NAL size " << nalSize << " exceeds frame boundary at position "
+                                            << m_demuxer->getProcessedBytes());
                 break;
             }
             cur += nalSize;
@@ -419,10 +422,7 @@ class MovParsedH266TrackData final : public MovParsedH264TrackData
 class MovParsedAV1TrackData final : public ParsedTrackPrivData
 {
    public:
-    MovParsedAV1TrackData(MovDemuxer* /*demuxer*/, MOVStreamContext* /*sc*/)
-        : m_firstExtract(true)
-    {
-    }
+    MovParsedAV1TrackData(MovDemuxer* /*demuxer*/, MOVStreamContext* /*sc*/) : m_firstExtract(true) {}
 
     void setPrivData(uint8_t* buff, const int size) override
     {
@@ -493,8 +493,8 @@ class MovParsedAV1TrackData final : public ParsedTrackPrivData
             // Payload with emulation prevention
             if (obuPayloadSize > 0)
             {
-                const int encoded = av1_add_emulation_prevention(payload, payload + obuPayloadSize, dst,
-                                                                  totalSize - (dst - pkt->data));
+                const int encoded =
+                    av1_add_emulation_prevention(payload, payload + obuPayloadSize, dst, totalSize - (dst - pkt->data));
                 if (encoded > 0)
                     dst += encoded;
                 else
@@ -718,9 +718,8 @@ class MovParsedSRTTrackData final : public ParsedTrackPrivData
                     buff += modifierLen;
             }
         }
-        catch (BitStreamException& e)
+        catch (BitStreamException&)
         {
-            (void)e;
             LTRACE(LT_ERROR, 2, "MP4/MOV error: Invalid SRT frame at position " << m_demuxer->getProcessedBytes());
         }
 

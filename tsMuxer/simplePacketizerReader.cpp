@@ -15,8 +15,6 @@ SimplePacketizerReader::SimplePacketizerReader()
     m_curPts = PTS_CONST_OFFSET;
     m_frameNum = 0;
     m_processedBytes = 0;
-    // JCDR TODO: virtual setTestMode in the constructor does not do anything, can we remove ?
-    setTestMode(false);
     m_containerDataType = 0;
     m_containerStreamIndex = 0;
     m_stretch = 1.0;

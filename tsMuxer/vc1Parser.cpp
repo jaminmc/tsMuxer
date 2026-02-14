@@ -207,14 +207,14 @@ int VC1SequenceHeader::decode_sequence_header()
 
         if (!bitReader.getBit())  // res_rtm_flag
             LTRACE(LT_WARN, 0, "Old WMV3 version detected.");
-        // TODO: figure out what they mean (always 0x402F)
+        // When res_fasttx is 0, the next 16 bits are reserved transform coefficients
+        // from older WMV3 streams (empirically observed as 0x402F).
         if (!res_fasttx)
             bitReader.skipBits(16);
         return 0;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -333,9 +333,8 @@ int VC1SequenceHeader::decode_entry_point()
         }
         return 0;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -351,9 +350,8 @@ int VC1Frame::decode_frame_direct(const VC1SequenceHeader& sequenceHdr, uint8_t*
             return vc1_parse_frame_header(sequenceHdr);
         return vc1_parse_frame_header_adv(sequenceHdr);
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }

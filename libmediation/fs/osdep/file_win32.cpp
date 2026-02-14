@@ -80,9 +80,10 @@ File::File(const char* fName, const unsigned int oflag,
 
 File::~File()
 {
-    // TODO: fix use of virtual fucntion inside destructor
+    // Use qualified call to bypass virtual dispatch, ensuring File::close()
+    // is called even if a derived class overrides close().
     if (isOpen())
-        close();
+        File::close();
 }
 
 bool File::open(const char* fName, const unsigned int oflag, unsigned int systemDependentFlags)

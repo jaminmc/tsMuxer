@@ -51,9 +51,8 @@ ParsedH264TrackData::ParsedH264TrackData(uint8_t* buff, const int size) : Parsed
             }
         }
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         THROW(ERR_MATROSKA_PARSE, "Can't parse H.264 private data")
     }
 };
@@ -364,6 +363,16 @@ ParsedVC1TrackData::ParsedVC1TrackData(uint8_t* buff, const int size) : ParsedTr
 
 void ParsedVC1TrackData::extractData(AVPacket* pkt, uint8_t* buff, const int size)
 {
+    if (size < 0)
+    {
+        pkt->data = nullptr;
+        pkt->size = 0;
+        return;
+    }
+
+    // Allocation accounts for: size + seqHeader (if first packet) + 4-byte frame header (if needed).
+    // The dst pointer advances by exactly seqHeader.size() and/or 4 before copying the remaining
+    // size bytes, so the total write fits the allocation precisely.
     pkt->size = size + (m_firstPacket ? static_cast<int>(m_seqHeader.size()) : 0);
     const bool addFrameHdr = !(size >= 4 && buff[0] == 0 && buff[1] == 0 && buff[2] == 1);
     if (addFrameHdr)
@@ -382,8 +391,6 @@ void ParsedVC1TrackData::extractData(AVPacket* pkt, uint8_t* buff, const int siz
         *dst++ = 1;
         *dst++ = 0x0d;
     }
-    // TODO: check compiler warning C6386 : Buffer overrun while writing to 'dst' :
-    // the writable size is 'size*1' bytes, but '4' bytes might be written.
     memcpy(dst, buff, size);
     m_firstPacket = false;
 }

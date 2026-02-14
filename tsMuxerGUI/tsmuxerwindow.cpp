@@ -93,10 +93,10 @@ QString fileDialogFilter()
     // Keep filters simple and extension-only to avoid silent failures.
     FileFilterVec filters = {
         {TsMuxerWindow::tr("All supported media files"),
-         {"ac3",  "ddp", "ec3",   "eac3",  "aac",  "avc",    "mvc", "264", "h264", "hevc", "265",
-          "h265", "obu", "dts", "dtshd", "dtsma", "thd",  "truehd", "mpv", "m1v", "m2v",  "mpa",  "ts",
-          "m2ts", "mts", "ssif",  "mpg",   "mpeg", "vob",    "evo", "mkv", "mka",  "mks",  "mp4",
-          "m4a",  "m4v", "mov",   "mpls",  "mpl",  "sup",    "srt", "wav", "w64",  "pcm"}},
+         {"ac3",  "ddp",  "ec3", "eac3",  "aac",   "avc",  "mvc",    "264", "h264", "hevc", "265",
+          "h265", "obu",  "dts", "dtshd", "dtsma", "thd",  "truehd", "mpv", "m1v",  "m2v",  "mpa",
+          "ts",   "m2ts", "mts", "ssif",  "mpg",   "mpeg", "vob",    "evo", "mkv",  "mka",  "mks",
+          "mp4",  "m4a",  "m4v", "mov",   "mpls",  "mpl",  "sup",    "srt", "wav",  "w64",  "pcm"}},
         {TsMuxerWindow::tr("Container files (TS, MKV, MP4, MOV, etc.)"),
          {"ts", "m2ts", "mts", "ssif", "mpg", "mpeg", "vob", "evo", "mkv", "mka", "mks", "mp4", "m4a", "m4v", "mov"}},
         {TsMuxerWindow::tr("Video elementary streams"),
@@ -108,10 +108,10 @@ QString fileDialogFilter()
 #else
     FileFilterVec filters = {
         {TsMuxerWindow::tr("All supported media files"),
-         {"ac3",  "ddp",   "ec3",   "eac3", "aac",    "avc",     "mvc",     "264", "h264", "hevc", "265", "h265",
-          "obu",  "dts",  "dtshd", "dtsma", "thd",  "truehd", "ac3+thd", "thd+ac3", "mpv", "m1v",  "m2v",  "mpa", "ts",
-          "m2ts", "mts",   "ssif",  "mpg",  "mpeg",   "vob",     "evo",     "mkv", "mka",  "mks",  "mp4", "m4a",
-          "m4v",  "mov",   "mpls",  "mpl",  "sup",    "srt",     "wav",     "w64", "pcm"}},
+         {"ac3", "ddp",  "ec3",   "eac3",  "aac", "avc",    "mvc",     "264",     "h264", "hevc", "265", "h265",
+          "obu", "dts",  "dtshd", "dtsma", "thd", "truehd", "ac3+thd", "thd+ac3", "mpv",  "m1v",  "m2v", "mpa",
+          "ts",  "m2ts", "mts",   "ssif",  "mpg", "mpeg",   "vob",     "evo",     "mkv",  "mka",  "mks", "mp4",
+          "m4a", "m4v",  "mov",   "mpls",  "mpl", "sup",    "srt",     "wav",     "w64",  "pcm"}},
         {TsMuxerWindow::tr("Container files (TS, MKV, MP4, MOV, etc.)"),
          {"ts", "m2ts", "mts", "ssif", "mpg", "mpeg", "vob", "evo", "mkv", "mka", "mks", "mp4", "m4a", "m4v", "mov"}},
         {TsMuxerWindow::tr("Video elementary streams"),
@@ -399,7 +399,6 @@ TsMuxerWindow::TsMuxerWindow()
     m_header = new QnCheckBoxedHeaderView(this);
     ui->trackLV->setHorizontalHeader(m_header);
     ui->trackLV->horizontalHeader()->setStretchLastSection(true);
-    // ui->trackLV->model()->setHeaderData(0, Qt::Vertical, "#");
     m_header->setVisible(true);
     m_header->setSectionsClickable(true);
 
@@ -586,8 +585,7 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
                 codecInfo->addSPS = false;
             }
             */
-            if (codecInfo->displayName == "HEVC" || codecInfo->displayName == "VVC" ||
-                codecInfo->displayName == "AV1")
+            if (codecInfo->displayName == "HEVC" || codecInfo->displayName == "VVC" || codecInfo->displayName == "AV1")
                 ui->checkBoxV3->setChecked(true);
             else if (codecInfo->displayName == "H.264" || codecInfo->displayName == "MVC" ||
                      codecInfo->displayName == "MPEG-2" || codecInfo->displayName == "VC-1")
@@ -638,12 +636,14 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
         }
         else if (procStdOutput[i].startsWith("File #"))
         {
-            tmpStr = QtCompat::strMid(procStdOutput[i], 17);  // todo: check here
+            // Format: "File #XXXXX name=<filename>", offset 17 = len("File #") + 5 + len(" name=")
+            tmpStr = QtCompat::strMid(procStdOutput[i], 17);
             mplsFileList << MPLSFileInfo(tmpStr, 0.0);
         }
         else if (procStdOutput[i].startsWith("Duration:"))
         {
-            tmpStr = QtCompat::strMid(procStdOutput[i], 10);  // todo: check here
+            // Format: "Duration: <time>", offset 10 = len("Duration: ")
+            tmpStr = QtCompat::strMid(procStdOutput[i], 10);
             if (!mplsFileList.empty())
             {
                 mplsFileList.last().duration = timeToFloat(tmpStr);
@@ -655,7 +655,8 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
         }
         else if (procStdOutput[i].startsWith("Base view: "))
         {
-            tmpStr = QtCompat::strMid(procStdOutput[i], 11);  // todo: check here
+            // Format: "Base view: <eye>", offset 11 = len("Base view: ")
+            tmpStr = QtCompat::strMid(procStdOutput[i], 11);
             ui->rightEyeCheckBox->setChecked(tmpStr.trimmed() == "right-eye");
         }
         else if (procStdOutput[i].startsWith("start-time: "))
@@ -1417,7 +1418,7 @@ void TsMuxerWindow::addLines(const QByteArray& arr, QList<QString>& outList, boo
             QString progress = QtCompat::strMid(strList[i], numStartPos, p - numStartPos);
             float tmpVal = progress.toFloat();
             if (qAbs(tmpVal) > 0 && runInMuxMode)
-                muxForm->setProgress(int(double(tmpVal * 10) + 0.5));  // todo: uncomment here
+                muxForm->setProgress(int(double(tmpVal * 10) + 0.5));
         }
         else
         {
@@ -1655,8 +1656,6 @@ QString TsMuxerWindow::getMuxOpts()
             rez += QString(" --maxbitrate=") + QString::number(ui->editMaxBitrate->value(), 'f', 3);
         }
     }
-    // if (!ui->checkBoxuseAsynIO->isChecked())
-    //	rez += " --no-asyncio";
     if (isDiskOutput())
     {
         if (ui->checkBoxBlankPL->isChecked() && isVideoCropped())
@@ -2020,8 +2019,6 @@ void TsMuxerWindow::updateMetaLines()
             postfix += QString(", track=") + QString::number(codecInfo->trackID);
         if (!codecInfo->lang.isEmpty())
             postfix += QString(", lang=") + codecInfo->lang;
-        // if (!codecInfo->mplsFile.isEmpty())
-        //	postfix += QString(", mplsFile=") + codecInfo->mplsFile;
         if (codecInfo->subTrack != 0)
             postfix += QString(", subTrack=") + QString::number(codecInfo->subTrack);
         if (isVideoCodec(codecInfo->displayName))
@@ -2212,11 +2209,7 @@ void TsMuxerWindow::deleteTrack(int idx)
     updateTracksComboBox(ui->defaultSubTrackComboBox);
 }
 
-void TsMuxerWindow::updateNum()
-{
-    // for (int i = 0; i < ui->trackLV->rowCount(); ++i)
-    //	ui->trackLV->item(i,0)->setText(QString::number(i+1));
-}
+void TsMuxerWindow::updateNum() {}
 
 void TsMuxerWindow::onAppendButtonClick()
 {

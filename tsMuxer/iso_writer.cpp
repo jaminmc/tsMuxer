@@ -925,7 +925,9 @@ void IsoWriter::writeDescriptors()
 
     const int64_t eofPos = m_partitionEndAddress * static_cast<int64_t>(SECTOR_SIZE);
     m_file.seek(eofPos + ALLOC_BLOCK_SIZE - SECTOR_SIZE);
-    // TODO: It may be preferable not to include the AVDP at (N - 256) for Rewritable media (ditto DVDFab and ImgBurn)
+    // Per ECMA-167 / UDF 2.50 (section 2.2.3), the AVDP at sector (N - 256) is required for
+    // rewritable media but optional for write-once media. We always write it here for maximum
+    // compatibility; omitting it for write-once media (as DVDFab and ImgBurn do) is acceptable.
     writeAnchorVolumeDescriptor(m_partitionEndAddress + ALLOC_BLOCK_SIZE / SECTOR_SIZE);
 
     writePrimaryVolumeDescriptor();

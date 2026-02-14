@@ -367,8 +367,9 @@ int DTSStreamReader::decodeHdInfo(uint8_t* buff, const uint8_t* end)
         }
         for (int i = 0; i < nuNumAssets; i++) reader.skipBits(isBlownUpHeader ? 20 : 16);
 
-        // JCDR TODO: have a look at this loop: with the 'break', i is never incremented
-        for (int i = 0; i < nuNumAssets; i++)
+        // Parse only the first asset descriptor; scalar fields (channels, sample rate, etc.)
+        // would simply be overwritten by subsequent assets, so only the first is meaningful.
+        if (nuNumAssets > 0)
         {
             reader.skipBits(12);  // nuAssetDescriptorFSIZE - 1, DescriptorDataForAssetIndex
             if (bStaticFieldsPresent)
@@ -401,7 +402,6 @@ int DTSStreamReader::decodeHdInfo(uint8_t* buff, const uint8_t* end)
                         const auto nuNumBits4SAMask = reader.getBits<uint8_t>(2) * 4 + 4;
                         nuSpkrActivityMask = reader.getBits<uint16_t>(nuNumBits4SAMask);
                     }
-                    // TODO...
                 }
                 hd_pi_sample_rate = dtshd_samplerate[nuMaxSampleRate];
                 hd_bitDepth = nuBitResolution;
@@ -420,13 +420,11 @@ int DTSStreamReader::decodeHdInfo(uint8_t* buff, const uint8_t* end)
                 if ((nuSpkrActivityMask & 0x1000) == 0x1000)
                     ++hd_pi_lfeCnt;
             }
-            break;
         }
         return hdFrameSize;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }

@@ -65,9 +65,8 @@ bool AACCodec::decodeFrame(uint8_t* buffer, const uint8_t* end)
         m_bit_rate = frameSize * 8 * m_sample_rate / m_samples;
         return true;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return false;
     }
 }

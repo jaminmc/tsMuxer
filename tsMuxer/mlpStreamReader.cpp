@@ -55,8 +55,8 @@ int MLPStreamReader::getTSDescriptor(uint8_t* dstBuff, bool blurayMode, bool hdm
         *dstBuff++ = 'D';
         *dstBuff++ = 'M';
         *dstBuff++ = 'V';
-        *dstBuff++ = 0xff;                                                     // stuffing_bits
-        *dstBuff++ = static_cast<uint8_t>(StreamType::AUDIO_TRUE_HD);          // stream_coding_type
+        *dstBuff++ = 0xff;                                             // stuffing_bits
+        *dstBuff++ = static_cast<uint8_t>(StreamType::AUDIO_TRUE_HD);  // stream_coding_type
         const int audio_presentation_type = (m_channels > 2) ? 6 : (m_channels == 2) ? 3 : 1;
         const int sampling_frequency = (m_samplerate == 192000) ? 5 : (m_samplerate == 96000) ? 4 : 1;
         *dstBuff++ = static_cast<uint8_t>(audio_presentation_type << 4 | sampling_frequency);

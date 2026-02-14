@@ -31,7 +31,7 @@ enum class Profile
 {
     SIMPLE,
     MAIN,
-    COMPLEX,  ///< TODO: WMV9 specific
+    COMPLEX,  ///< WMV9 Complex profile (not part of SMPTE 421M VC-1, only in WMV9/WMV3)
     ADVANCED
 };
 

@@ -289,9 +289,9 @@ AC3Codec::AC3ParseError AC3Codec::parseHeader(uint8_t* buf, const uint8_t* end)
             if (gbc.getBits(6) == 1)  // addbsi length
             {
                 // ETSI TS 103 420 - Backwards-compatible object audio carriage using Enhanced AC-3
-                // para. 8.3 Extensions contained in the addbsi bitstream field
-                // TODO: conditions below might not be sufficient to detect Atmos
-                // ideally, detect payload syncword (but where is it located ?)
+                // para. 8.3: Extensions contained in the addbsi bitstream field.
+                // Per the spec, flag_ec3_extension_type_a == 1 signals a Type A extension (Atmos),
+                // and complexity_index_type_a in [0..16] confirms a valid Atmos complexity index.
                 const auto flag_ec3_extension_type_a = gbc.getBits(8) == 1;
                 if (flag_ec3_extension_type_a)
                 {

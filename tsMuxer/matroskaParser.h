@@ -128,7 +128,14 @@ static constexpr uint8_t MATROSKA_ID_CUETRACK = 0xF7;
 static constexpr uint8_t MATROSKA_ID_CUECLUSTERPOSITION = 0xF1;
 
 /* IDs in the tags master */
-/* TODO */
+static constexpr uint16_t MATROSKA_ID_TAG = 0x7373;
+static constexpr uint16_t MATROSKA_ID_TAGTARGETS = 0x63C0;
+static constexpr uint32_t MATROSKA_ID_TAGTARGETS_TYPEVALUE = 0x68CA;
+static constexpr uint32_t MATROSKA_ID_TAGTARGETS_TRACKUID = 0x63C5;
+static constexpr uint16_t MATROSKA_ID_SIMPLETAG = 0x67C8;
+static constexpr uint16_t MATROSKA_ID_TAGNAME = 0x45A3;
+static constexpr uint16_t MATROSKA_ID_TAGSTRING = 0x4487;
+static constexpr uint16_t MATROSKA_ID_TAGLANG = 0x447A;
 
 /* IDs in the seekhead master */
 static constexpr uint16_t MATROSKA_ID_SEEKENTRY = 0x4DBB;

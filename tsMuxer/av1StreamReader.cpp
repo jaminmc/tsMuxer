@@ -94,8 +94,7 @@ CheckStreamRez AV1StreamReader::checkStream(uint8_t* buffer, const int len)
             if (tmpHdr.deserialize(payload, trimmedLen) == 0)
             {
                 // Additional sanity: aspect ratio must be reasonable
-                const double aspect =
-                    static_cast<double>(tmpHdr.max_frame_width) / tmpHdr.max_frame_height;
+                const double aspect = static_cast<double>(tmpHdr.max_frame_width) / tmpHdr.max_frame_height;
                 if (aspect < 0.1 || aspect > 20.0)
                     continue;
 
@@ -105,8 +104,7 @@ CheckStreamRez AV1StreamReader::checkStream(uint8_t* buffer, const int len)
                 foundSeqHdr = true;
             }
         }
-        else if (obuHdr.obu_type == Av1ObuType::FRAME ||
-                 obuHdr.obu_type == Av1ObuType::FRAME_HEADER)
+        else if (obuHdr.obu_type == Av1ObuType::FRAME || obuHdr.obu_type == Av1ObuType::FRAME_HEADER)
         {
             foundFrame = true;
         }
@@ -201,8 +199,7 @@ int AV1StreamReader::intDecodeNAL(uint8_t* buff)
                 }
 
                 // Determine HDR/WCG indicator from color properties
-                if (m_seqHdr.transfer_characteristics == AV1_TC_PQ ||
-                    m_seqHdr.transfer_characteristics == AV1_TC_HLG)
+                if (m_seqHdr.transfer_characteristics == AV1_TC_PQ || m_seqHdr.transfer_characteristics == AV1_TC_HLG)
                 {
                     // HDR content
                     if (m_seqHdr.color_primaries == AV1_CP_BT_2020)
@@ -323,10 +320,10 @@ int AV1StreamReader::getTSDescriptor(uint8_t* dstBuff, bool blurayMode, const bo
 
     // Byte 2: seq_tier_0(1) + high_bitdepth(1) + twelve_bit(1) + monochrome(1) +
     //          chroma_subsampling_x(1) + chroma_subsampling_y(1) + chroma_sample_position(2)
-    *dstBuff++ = static_cast<uint8_t>((m_seqHdr.seq_tier_0 << 7) | (m_seqHdr.high_bitdepth << 6) |
-                                      (m_seqHdr.twelve_bit << 5) | (m_seqHdr.mono_chrome << 4) |
-                                      (m_seqHdr.chroma_subsampling_x << 3) | (m_seqHdr.chroma_subsampling_y << 2) |
-                                      (m_seqHdr.chroma_sample_position & 0x03));
+    *dstBuff++ =
+        static_cast<uint8_t>((m_seqHdr.seq_tier_0 << 7) | (m_seqHdr.high_bitdepth << 6) | (m_seqHdr.twelve_bit << 5) |
+                             (m_seqHdr.mono_chrome << 4) | (m_seqHdr.chroma_subsampling_x << 3) |
+                             (m_seqHdr.chroma_subsampling_y << 2) | (m_seqHdr.chroma_sample_position & 0x03));
 
     // Byte 3: hdr_wcg_idc(2) + reserved(1) + initial_presentation_delay_present(1) + reserved(4)
     *dstBuff++ = static_cast<uint8_t>((m_hdrWcgIdc & 0x03) << 6);

@@ -56,9 +56,8 @@ int HevcUnit::deserialize()
             return 1;
         return 0;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -141,9 +140,8 @@ int HevcUnitWithProfile::profile_tier_level(const int subLayers)
         }
         return 0;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -218,9 +216,8 @@ int HevcVpsUnit::deserialize()
 
         return rez;
     }
-    catch (VodCoreException& e)
+    catch (VodCoreException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -640,9 +637,8 @@ int HevcSpsUnit::deserialize()
 
         return 0;
     }
-    catch (VodCoreException& e)
+    catch (VodCoreException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -695,9 +691,8 @@ int HevcPpsUnit::deserialize()
 
         return 0;
     }
-    catch (VodCoreException& e)
+    catch (VodCoreException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -777,9 +772,8 @@ int HevcHdrUnit::deserialize()
 
         return 0;
     }
-    catch (VodCoreException& e)
+    catch (VodCoreException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -832,9 +826,8 @@ int HevcSliceHeader::deserialize(const HevcSpsUnit* sps, const HevcPpsUnit* pps)
 
         return 0;
     }
-    catch (VodCoreException& e)
+    catch (VodCoreException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -911,8 +904,7 @@ vector<vector<uint8_t>> hevc_extract_priv_data(const uint8_t* buff, int size, ui
             spsPps.emplace_back();
             auto& nal = spsPps.back();
             nal.reserve(nalSize);
-            for (int k = 0; k < nalSize; ++k, ++src)
-                nal.push_back(*src);
+            for (int k = 0; k < nalSize; ++k, ++src) nal.push_back(*src);
         }
     }
 

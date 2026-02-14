@@ -37,7 +37,7 @@ class DTSStreamReader final : public SimplePacketizerReader
         hd_pi_sample_rate = pi_sample_rate = 0;
         m_isCoreExists = true;
         m_firstCall = true;
-        pi_frame_length = 0;  // todo: investigate how to fill it if core absent
+        pi_frame_length = 0;  // populated from extension substream header (nuExSSFrameDurationCode) when core is absent
         m_skippingSamples = 0;
         m_dataSegmentLen = 0;
         core_ext_mask = 0;

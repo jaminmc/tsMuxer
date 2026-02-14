@@ -684,6 +684,15 @@ int MatroskaDemuxer::matroska_parse_block(uint8_t* data, int size, const int64_t
                     offset = static_cast<int>(tracks[track]->encodingAlgoPriv.size());
                     if (offset)
                     {
+                        // Ensure the pointer won't move before the start of the data buffer
+                        if (slice_offset < offset)
+                        {
+                            LTRACE(LT_ERROR, 0, "strip-headers offset exceeds slice_offset");
+                            delete pkt;
+                            delete[] origdata;
+                            delete[] lace_size;
+                            return res;
+                        }
                         curPtr -= offset;
                         curPtr_size += offset;
                         m_tmpBuffer.append(curPtr, offset);  // save data
@@ -715,7 +724,6 @@ int MatroskaDemuxer::matroska_parse_block(uint8_t* data, int size, const int64_t
                 {
                     pkt->data = new uint8_t[slice_size + offset];
                     pkt->size = slice_size + offset;
-                    // TODO : check compiler warning 'Reading invalid data from curPtr'
                     memcpy(pkt->data, curPtr, slice_size + offset);
                 }
                 if (offset)
@@ -998,9 +1006,11 @@ int MatroskaDemuxer::matroska_parse_cluster()
         case EBML_ID_CRC32:
             res = ebml_read_skip();
             break;
-        // Don't know why here is the next cluster without level up. Probably file error
-        // TODO: does the EBML need to be skipped ?
+        // Some files contain a new cluster without a proper level-up signal (likely a muxing error).
+        // Returning 0 lets the caller re-detect this cluster at the top level and parse it normally;
+        // skipping it would lose the data it contains.
         case MATROSKA_ID_CLUSTER:
+            LTRACE(LT_WARN, 0, "Unexpected cluster element inside cluster data (no level-up); resuming at top level");
             return 0;
         default:
             LTRACE(LT_WARN, 0, "Unknown entry " << id << " in cluster data");
@@ -2045,7 +2055,9 @@ int MatroskaDemuxer::matroska_add_stream()
 
                 switch (id)
                 {
-                /* fixme, this should be one-up, but I get it here */
+                // MATROSKA_ID_TRACKDEFAULTDURATION belongs one level up (in the track entry),
+                // but some muxers incorrectly place it inside the video settings element.
+                // Handle it here as well for compatibility with such files.
                 case MATROSKA_ID_TRACKDEFAULTDURATION:
                 {
                     int64_t num;

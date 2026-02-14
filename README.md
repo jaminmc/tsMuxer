@@ -84,7 +84,7 @@ We’re using the infamous [simplified Github workflow](http://scottchacon.com/2
 * create an issue related to the problem you want to fix (good for traceability and cross-reference)
 * fork the repository
 * create a branch (optionally with the reference to the issue in the name)
-* hack hack hack
+* make your changes
 * commit incrementally with readable and detailed commit messages
 * submit a pull-request against the master branch of this repository
 

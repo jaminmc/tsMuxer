@@ -13,7 +13,6 @@ class MPEG2StreamReader final : public MPEGStreamReader
         m_isFirstFrame = true;
         spsFound = false;
         m_framesAtGop = 0;
-        // m_lastFullFrame = true;
         m_lastRef = -1;
         m_seqExtFound = false;
         m_streamMsgPrinted = false;

@@ -29,8 +29,10 @@ uint32_t MPEGRawDataHeader::serialize(uint8_t* buffer)
 {
     if (!m_headerIncludedToBuff)
     {
-        // buffer does not include pictureHeader. we're serializing it.
-        // todo not implemented. this branch is currently never entered.
+        // Buffer does not include pictureHeader, so we'd need to serialize it manually.
+        // In practice this branch is never reached because addRawData always sets
+        // m_headerIncludedToBuff = headerIncluded based on the first call with header data.
+        LTRACE(LT_WARN, 0, "MPEGRawDataHeader::serialize called without header in buffer (not implemented)");
     }
     // the buffer includes everything - the pictureHeader as well
     memcpy(buffer, m_data_buffer, m_data_buffer_len);

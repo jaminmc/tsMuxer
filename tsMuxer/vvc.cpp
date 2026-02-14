@@ -1,4 +1,4 @@
-﻿#include "vvc.h"
+#include "vvc.h"
 
 #include <algorithm>
 #include <cmath>
@@ -51,9 +51,8 @@ int VvcUnit::deserialize()
             return 1;
         return 0;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -163,9 +162,8 @@ int VvcUnitWithProfile::profile_tier_level(const bool profileTierPresentFlag, co
         }
         return 0;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -433,9 +431,8 @@ int VvcVpsUnit::deserialize()
 
         return rez;
     }
-    catch (BitStreamException& e)
+    catch (BitStreamException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -831,9 +828,8 @@ int VvcSpsUnit::deserialize()
         m_reader.skipBit();  // sps_extension_flag
         return 0;
     }
-    catch (VodCoreException& e)
+    catch (VodCoreException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -947,9 +943,8 @@ int VvcPpsUnit::deserialize()
 
         return 0;
     }
-    catch (VodCoreException& e)
+    catch (VodCoreException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
@@ -1054,9 +1049,8 @@ int VvcSliceHeader::deserialize(const VvcSpsUnit* sps, const VvcPpsUnit* pps)
 
         return 0;
     }
-    catch (VodCoreException& e)
+    catch (VodCoreException&)
     {
-        (void)e;
         return NOT_ENOUGH_BUFFER;
     }
 }
