@@ -11,6 +11,7 @@
 #include "aacStreamReader.h"
 #include "ac3StreamReader.h"
 #include "av1StreamReader.h"
+#include "avCodecs.h"
 #include "bufferedReaderManager.h"
 #include "combinedH264Demuxer.h"
 #include "dtsStreamReader.h"
@@ -20,9 +21,7 @@
 #include "hevcStreamReader.h"
 #include "lpcmStreamReader.h"
 #include "matroskaDemuxer.h"
-#include "avCodecs.h"
 #include "mlpStreamReader.h"
-#include "trueHDAC3MergeReader.h"
 #include "movDemuxer.h"
 #include "mpeg2StreamReader.h"
 #include "mpegAudioStreamReader.h"
@@ -32,6 +31,7 @@
 #include "programStreamDemuxer.h"
 #include "srtStreamReader.h"
 #include "subTrackFilter.h"
+#include "trueHDAC3MergeReader.h"
 #include "tsDemuxer.h"
 #include "vc1StreamReader.h"
 #include "vodCoreException.h"
@@ -204,7 +204,8 @@ void METADemuxer::openFile(const string& streamName)
         codec = strToUpperCase(codec);
         if (codec == "A_MLP" && addParams.find("merge-ac3-track") != addParams.end())
         {
-            const int thdPid = addParams.find("track") != addParams.end() ? strToInt32(addParams.at("track").c_str()) : 0;
+            const int thdPid =
+                addParams.find("track") != addParams.end() ? strToInt32(addParams.at("track").c_str()) : 0;
             const int ac3Pid = strToInt32(addParams.at("merge-ac3-track").c_str());
             if (thdPid == 0)
                 THROW(ERR_INVALID_CODEC_FORMAT,
