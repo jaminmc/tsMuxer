@@ -11,6 +11,7 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QStandardPaths>
 #include <QTemporaryFile>
 #include <QTime>
@@ -366,7 +367,8 @@ TsMuxerWindow::TsMuxerWindow()
       muxForm(new MuxForm(this)),
       m_updateMeta(true),
       m_3dMode(false),
-      m_fileDialogOpen(false)
+      m_fileDialogOpen(false),
+      m_customChaptersUserOverride(false)
 {
     ui->setupUi(this);
     setUiMetaItemsData();
@@ -683,6 +685,7 @@ void TsMuxerWindow::onTsMuxerCodecInfoReceived()
                 firstMark = false;
                 ui->radioButtonCustomChapters->setChecked(true);
             }
+            m_customChaptersUserOverride = false;
             QStringList stringList = QtCompat::strMid(procStdOutput[i], 7).split(' ');
             for (int k = 0; k < stringList.size(); ++k)
                 if (!stringList[k].isEmpty())
@@ -1440,6 +1443,9 @@ void TsMuxerWindow::continueAddFile()
 
 void TsMuxerWindow::updateCustomChapters()
 {
+    if (ui->radioButtonCustomChapters->isChecked() && m_customChaptersUserOverride)
+        return;
+
     QSet<qint64> chaptersSet;
     double prevDuration = 0.0;
     double offset = 0.0;
@@ -1457,6 +1463,7 @@ void TsMuxerWindow::updateCustomChapters()
         for (double chapter : chapters) chaptersSet << qint64((chapter + offset) * 1000000);
         prevDuration = item->data(FileDurationRole).toDouble();
     }
+    const QSignalBlocker blocker(ui->memoChapters);
     ui->memoChapters->clear();
     QList<qint64> mergedChapterList = chaptersSet.values();
     std::sort(std::begin(mergedChapterList), std::end(mergedChapterList));
@@ -2161,6 +2168,11 @@ void TsMuxerWindow::onChapterParamsChanged()
 {
     ui->memoChapters->setEnabled(ui->radioButtonCustomChapters->isChecked());
     ui->spinEditChapterLen->setEnabled(ui->radioButtonAutoChapter->isChecked());
+    QObject* snd = sender();
+    if (snd == ui->radioButtonNoChapters || snd == ui->radioButtonAutoChapter)
+        m_customChaptersUserOverride = false;
+    else if (snd == ui->memoChapters && ui->radioButtonCustomChapters->isChecked())
+        m_customChaptersUserOverride = true;
     updateMetaLines();
 }
 
