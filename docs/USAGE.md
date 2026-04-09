@@ -109,8 +109,9 @@ merge-ac3-file    | **A_MLP only.** Path to an external classic AC-3 (`.ac3`) fi
 Some remuxed Blu-ray MKVs store Dolby TrueHD and the AC-3 compatibility track as **separate tracks**. For Blu-ray
 output, tsMuxer can merge them into the Blu-ray style interleaved TrueHD+AC-3 stream during muxing.
 
-- **Important limitation**: the AC-3 must be a **separate Matroska track in the same MKV**. This feature does **not**
-  load an external `.ac3` file and attach it to a TrueHD track directly.
+- **Note**: You can merge either:
+  - an **AC-3 Matroska track** from the same MKV (`merge-ac3-track`), or
+  - an external **AC-3 file** (`merge-ac3-file`).
 
 #### Meta file example
 
@@ -124,9 +125,10 @@ A_MLP, "movie.mkv", track=2, merge-ac3-track=3
 
 Select the **TRUE-HD** track, then set:
 - `track=` to the TrueHD Matroska track number
-- **Merge AC-3 track** to the AC-3 Matroska track number
+- **Merge AC-3 track** to the AC-3 Matroska track number (when the AC-3 exists as a track in the MKV), or
+- **Merge AC-3 file** to a standalone `.ac3` file (when the MKV does not contain an AC-3 track)
 
-The GUI will emit `merge-ac3-track=<n>` into the meta preview.
+The GUI will emit either `merge-ac3-track=<n>` or `merge-ac3-file="path"` into the meta preview.
 
 #### If the MKV has no AC-3 track
 
@@ -136,8 +138,10 @@ Create an AC-3 compatibility stream from the TrueHD audio with FFmpeg (choose th
 ffmpeg -i input.mkv -map 0:a:0 -c:a ac3 -b:a 640k -ac 6 compat.ac3
 ```
 
-Then **remux** `compat.ac3` back into the MKV as a separate audio track (e.g. with `mkvmerge`), and use
-`merge-ac3-track` with the new AC-3 track number.
+Then either:
+- use **Merge AC-3 file** / `merge-ac3-file="compat.ac3"` directly, or
+- **remux** `compat.ac3` back into the MKV as a separate audio track (e.g. with `mkvmerge`) and use
+  **Merge AC-3 track** / `merge-ac3-track` with the new AC-3 track number.
 
 ### TrueHD (`.thd`) + AC-3 (`.ac3`) merge (elementary streams)
 
