@@ -35,6 +35,7 @@ add_executable (tsmuxer
   metaDemuxer.cpp
   mlpCodec.cpp
   mlpStreamReader.cpp
+  trueHDAC3MergeReader.cpp
   movDemuxer.cpp
   mp3Codec.cpp
   mpeg2StreamReader.cpp

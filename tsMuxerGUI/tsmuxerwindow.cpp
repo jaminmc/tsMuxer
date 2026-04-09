@@ -453,6 +453,7 @@ TsMuxerWindow::TsMuxerWindow()
     connect(ui->checkBoxKeepFps, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
     connect(ui->dtsDwnConvert, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
     connect(ui->secondaryCheckBox, &QCheckBox::checkStateChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
+    connect(ui->mergeAc3TrackSpinBox, spinBoxValueChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
     connect(ui->langComboBox, comboBoxIndexChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
     connect(ui->offsetsComboBox, comboBoxIndexChanged, this, &TsMuxerWindow::onAudioSubtitlesParamsChanged);
     connect(ui->comboBoxPipCorner, comboBoxIndexChanged, this, &TsMuxerWindow::onSavedParamChanged);
@@ -1016,6 +1017,13 @@ void TsMuxerWindow::onAudioSubtitlesParamsChanged()
     {
         codecInfo->lang.clear();
     }
+
+    // TrueHD + AC-3 merge (CLI meta parameter on A_MLP only)
+    if (codecInfo->programName == "A_MLP")
+        codecInfo->mergeAc3Track = ui->mergeAc3TrackSpinBox->value();
+    else
+        codecInfo->mergeAc3Track = 0;
+
     ui->trackLV->item(ui->trackLV->currentRow(), 3)->setText(codecInfo->lang);
     colorizeCurrentRow(codecInfo);
 
@@ -1191,6 +1199,15 @@ void TsMuxerWindow::trackLVItemSelectionChanged()
             ui->offsetsComboBox->setCurrentIndex(codecInfo->offsetId + 1);
             ui->dtsDwnConvert->setVisible(codecInfo->displayName != "PGS" && codecInfo->displayName != "SRT");
             ui->secondaryCheckBox->setVisible(ui->dtsDwnConvert->isVisible());
+            const bool showMergeAc3 =
+                (codecInfo->programName == "A_MLP" && codecInfo->displayName == "TRUE-HD" && codecInfo->trackID != 0);
+            ui->mergeAc3TrackLabel->setVisible(showMergeAc3);
+            ui->mergeAc3TrackSpinBox->setVisible(showMergeAc3);
+            ui->mergeAc3TrackSpinBox->setEnabled(showMergeAc3);
+            if (showMergeAc3)
+                ui->mergeAc3TrackSpinBox->setValue(codecInfo->mergeAc3Track);
+            else
+                ui->mergeAc3TrackSpinBox->setValue(0);
 
             bool isPGS = codecInfo->displayName == "PGS";
             ui->checkBoxKeepFps->setVisible(isPGS);
@@ -2111,6 +2128,11 @@ void TsMuxerWindow::updateMetaLines()
         }
         if (codecInfo->trackID != 0)
             postfix += QString(", track=") + QString::number(codecInfo->trackID);
+        if (codecInfo->programName == "A_MLP" && codecInfo->mergeAc3Track > 0)
+        {
+            if (codecInfo->mergeAc3Track != codecInfo->trackID)
+                postfix += QString(", merge-ac3-track=") + QString::number(codecInfo->mergeAc3Track);
+        }
         if (!codecInfo->lang.isEmpty())
             postfix += QString(", lang=") + codecInfo->lang;
         if (codecInfo->subTrack != 0)

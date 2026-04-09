@@ -5,7 +5,7 @@
 #include "mlpCodec.h"
 #include "simplePacketizerReader.h"
 
-class MLPStreamReader final : public SimplePacketizerReader, public MLPCodec
+class MLPStreamReader : public SimplePacketizerReader, public MLPCodec
 {
    public:
     MLPStreamReader()
@@ -30,9 +30,11 @@ class MLPStreamReader final : public SimplePacketizerReader, public MLPCodec
     int readPacket(AVPacket& avPacket) override;
     int flushPacket(AVPacket& avPacket) override;
 
-   private:
+   protected:
     int m_demuxedTHDSamples;
     int64_t m_totalTHDSamples;
+
+   private:
 };
 
 #endif

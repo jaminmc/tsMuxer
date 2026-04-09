@@ -699,6 +699,26 @@
                  </widget>
                 </item>
                 <item>
+                 <widget class="QLabel" name="mergeAc3TrackLabel">
+                  <property name="text">
+                   <string>Merge AC-3 track:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="mergeAc3TrackSpinBox">
+                  <property name="minimum">
+                   <number>0</number>
+                  </property>
+                  <property name="maximum">
+                   <number>9999</number>
+                  </property>
+                  <property name="toolTip">
+                   <string>For TRUE-HD (A_MLP) in MKV only: Matroska AC-3 compatibility track number to merge (merge-ac3-track=).</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_11">
                   <item>
                    <widget class="QCheckBox" name="dtsDwnConvert">

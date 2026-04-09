@@ -374,7 +374,8 @@ Names of codecs in the meta file:
 - V_MPEG-2          MPEG2
 - V_AV1             AV1
 - A_AC3             AC3/AC3+/TRUE-HD
-- A_MLP             TRUE-HD (standalone TrueHD stream)
+- A_MLP             TRUE-HD (standalone TrueHD stream). For Blu-ray style TrueHD + AC-3 core from an MKV that
+                    stores them as separate tracks, use merge-ac3-track=<n> with track=<TrueHD n> (see below).
 - A_AAC             AAC
 - A_DTS             DTS/DTS-Express/DTS-HD
 - A_MP3             MPEG audio layer 1/2/3
@@ -399,6 +400,17 @@ Additional parameters for audio tracks:
 - stretch           Stretch audio by a given factor. Can be a decimal value or a
                     fraction (e.g. 25/24). Useful for fixing A/V sync issues
                     caused by frame rate discrepancies.
+
+TrueHD + AC-3 core merge (MKV only):
+- merge-ac3-track   Matroska track number of a classic AC-3 (Dolby Digital) stream to interleave with this A_MLP
+                    TrueHD track for BD muxing. Requires track=<TrueHD track number>; do not add the AC-3 track as
+                    a separate line in the meta file.
+                    Example: A_MLP, "movie.mkv", track=2, merge-ac3-track=3
+If the file has TrueHD but no AC-3 track, decode the TrueHD track to AC-3 with ffmpeg (pick the correct audio
+index for 0:a:N), for example:
+    ffmpeg -i input.mkv -map 0:a:0 -c:a ac3 -b:a 640k -ac 6 compat.ac3
+Remux the original MKV streams plus compat.ac3 into one MKV (e.g. mkvmerge), then reference TrueHD with
+track= and the new AC-3 with merge-ac3-track= in the meta file.
 
 Additional parameters for video tracks:
 - fps               The number of frames per second. If not defined, the value

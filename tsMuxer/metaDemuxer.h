@@ -43,9 +43,12 @@ struct StreamInfo
         m_asyncMode = true;
         m_blockSize = 0;
         m_isSubStream = isSubStream;
+        m_mergeAc3ReaderId = -1;
     }
 
     int read();
+
+    int m_mergeAc3ReaderId;
 
     int m_lastAVRez;
     int64_t m_readCnt;

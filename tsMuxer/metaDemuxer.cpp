@@ -20,7 +20,9 @@
 #include "hevcStreamReader.h"
 #include "lpcmStreamReader.h"
 #include "matroskaDemuxer.h"
+#include "avCodecs.h"
 #include "mlpStreamReader.h"
+#include "trueHDAC3MergeReader.h"
 #include "movDemuxer.h"
 #include "mpeg2StreamReader.h"
 #include "mpegAudioStreamReader.h"
@@ -200,6 +202,19 @@ void METADemuxer::openFile(const string& streamName)
         string codec = trimStr(params[0]);
         string codecStreamName = trimStr(params[1]);
         codec = strToUpperCase(codec);
+        if (codec == "A_MLP" && addParams.find("merge-ac3-track") != addParams.end())
+        {
+            const int thdPid = addParams.find("track") != addParams.end() ? strToInt32(addParams.at("track").c_str()) : 0;
+            const int ac3Pid = strToInt32(addParams.at("merge-ac3-track").c_str());
+            if (thdPid == 0)
+                THROW(ERR_INVALID_CODEC_FORMAT,
+                      "A_MLP with merge-ac3-track requires track=<TrueHD Matroska track number>.")
+            if (ac3Pid <= 0)
+                THROW(ERR_INVALID_CODEC_FORMAT, "merge-ac3-track must be a positive Matroska track number.")
+            if (ac3Pid == thdPid)
+                THROW(ERR_INVALID_CODEC_FORMAT,
+                      "merge-ac3-track must be a different track number than the TrueHD track= parameter.")
+        }
         if (!m_HevcFound)
             m_HevcFound = (codec.find("HEVC") == 12);
         addStream(codec, codecStreamName, addParams);
@@ -563,6 +578,17 @@ int METADemuxer::addStream(const string& codec, const string& codecStreamName, c
         streamInfo.m_lang = itr->second;
     m_totalSize += fileSize;
 
+    if (auto* mergeReader = dynamic_cast<TrueHDAC3MergeReader*>(codecReader))
+    {
+        if (dataReader != &m_containerReader)
+            THROW(ERR_INVALID_CODEC_FORMAT,
+                  "merge-ac3-track is only supported when the TrueHD stream is inside a container (e.g. MKV).")
+        const int r2 = m_containerReader.createReader(mergeReader->getTmpBufferSize());
+        if (!m_containerReader.openStream(r2, fileList[0].c_str(), mergeReader->mergeAc3TrackPid(), &ac3CodecInfo))
+            THROW(ERR_CANT_OPEN_STREAM, "Can't open merge-ac3-track stream: " << fileList[0])
+        streamInfo.m_mergeAc3ReaderId = r2;
+    }
+
     return streamIndex;
 }
 
@@ -570,6 +596,8 @@ void METADemuxer::readClose()
 {
     for (const auto& codecInfo : m_codecInfo)
     {
+        if (codecInfo.m_mergeAc3ReaderId >= 0)
+            codecInfo.m_dataReader->deleteReader(codecInfo.m_mergeAc3ReaderId);
         codecInfo.m_dataReader->deleteReader(codecInfo.m_readerID);
         delete codecInfo.m_streamReader;
     }
@@ -1276,7 +1304,12 @@ AbstractStreamReader* METADemuxer::createCodec(const string& codecName, const ma
     else if (codecName == "A_LPCM")
         rez = new LPCMStreamReader();
     else if (codecName == "A_MLP")
-        rez = new MLPStreamReader();
+    {
+        if (addParams.find("merge-ac3-track") != addParams.end())
+            rez = new TrueHDAC3MergeReader(addParams);
+        else
+            rez = new MLPStreamReader();
+    }
     else if (codecName == "A_FLAC")
         rez = new FLACStreamReader();
     else if (codecName == "A_OPUS")
@@ -1552,6 +1585,23 @@ int StreamInfo::read()
             return BufferedFileReader::DATA_EOF2;
         }
         m_lastAVRez = 0;
+
+        if (m_mergeAc3ReaderId >= 0)
+        {
+            auto* mergeReader = dynamic_cast<TrueHDAC3MergeReader*>(m_streamReader);
+            if (mergeReader)
+            {
+                uint32_t ac3Cnt = 0;
+                int ac3Rez = 0;
+                uint8_t* ac3Data = m_dataReader->readBlock(m_mergeAc3ReaderId, ac3Cnt, ac3Rez);
+                if (ac3Rez == BufferedFileReader::DATA_NOT_READY || ac3Rez == BufferedFileReader::DATA_DELAYED)
+                {
+                    m_lastAVRez = ac3Rez;
+                    return ac3Rez;
+                }
+                mergeReader->setAc3SideData(ac3Data, ac3Cnt);
+            }
+        }
 
         m_data = m_dataReader->readBlock(m_readerID, m_blockSize, readRez);
         if (readRez == BufferedFileReader::DATA_NOT_READY || readRez == BufferedFileReader::DATA_DELAYED)

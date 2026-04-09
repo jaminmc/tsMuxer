@@ -11,6 +11,7 @@
 #include "muxerManager.h"
 #include "pgsStreamReader.h"
 #include "srtStreamReader.h"
+#include "trueHDAC3MergeReader.h"
 #include "vodCoreException.h"
 
 #ifndef win32
@@ -59,7 +60,10 @@ void SingleFileMuxer::intAddStream(const std::string& streamName, const std::str
     }
     else if (codecName == "A_MLP")
     {
-        fileExt = ".thd";
+        if (dynamic_cast<TrueHDAC3MergeReader*>(codecReader))
+            fileExt = ".ac3+thd";
+        else
+            fileExt = ".thd";
     }
     else if (codecName == "A_DTS")
     {

@@ -11,6 +11,7 @@
 #include "mpegAudioStreamReader.h"
 #include "mpegStreamReader.h"
 #include "muxerManager.h"
+#include "trueHDAC3MergeReader.h"
 #include "pesPacket.h"
 #include "tsPacket.h"
 #include "vodCoreException.h"
@@ -369,6 +370,8 @@ void TSMuxer::intAddStream(const std::string& streamName, const std::string& cod
     {
         m_pmt.pidList[tsStreamIndex] = PMTStreamInfo(StreamType::AUDIO_TRUE_HD, tsStreamIndex, descrBuffer,
                                                      descriptorLen, codecReader, lang, isSecondary);
+        if (const auto mergeReader = dynamic_cast<TrueHDAC3MergeReader*>(codecReader))
+            mergeReader->setNewStyleAudioPES(m_useNewStyleAudioPES);
     }
     else if (codecName == "A_DTS")
     {

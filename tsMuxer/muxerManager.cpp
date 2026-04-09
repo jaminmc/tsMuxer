@@ -179,6 +179,7 @@ void MuxerManager::checkTrackList(const vector<StreamInfo>& ci) const
     bool mvcFound = false;
     bool aacFound = false;
     bool mlpFound = false;
+    bool mlpMergedWithAc3 = false;
 
     for (const StreamInfo& si : ci)
     {
@@ -189,7 +190,11 @@ void MuxerManager::checkTrackList(const vector<StreamInfo>& ci) const
         else if (si.m_codec == aacCodecInfo.programName)
             aacFound = true;
         else if (si.m_codec == mlpCodecInfo.programName)
+        {
             mlpFound = true;
+            if (si.m_addParams.find("merge-ac3-track") != si.m_addParams.end())
+                mlpMergedWithAc3 = true;
+        }
     }
 
     if (m_bluRayMode)
@@ -197,7 +202,7 @@ void MuxerManager::checkTrackList(const vector<StreamInfo>& ci) const
         if (aacFound)
             LTRACE(LT_ERROR, 2,
                    "Warning! AAC codec is not standard for BD disks, the disk will not play in a Blu-ray player.");
-        else if (m_bluRayMode && mlpFound)
+        else if (m_bluRayMode && mlpFound && !mlpMergedWithAc3)
             LTRACE(LT_ERROR, 2,
                    "Warning! MLP codec is not standard for BD disks, the disk will not play in a Blu-ray player.");
         else if (m_bluRayMode && (V3_flags & DV) && !(V3_flags & BL_TRACK))
