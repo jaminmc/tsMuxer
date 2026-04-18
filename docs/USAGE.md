@@ -6,6 +6,56 @@ The simplest thing to do is to use the tsMuxerGUI. A screenshot of that can be s
 
 ![tsMuxerGUI_Screenshot](https://user-images.githubusercontent.com/122434/148913872-b7af9caa-c2ca-4892-8853-06fd6329a15a.png)
 
+### Editing the Meta File in the GUI
+
+The tsMuxerGUI displays an auto-generated meta file in the "Meta file" section. This preview shows the exact content that will be used when you start muxing. 
+
+You can now **manually edit this meta file** directly in the GUI to use advanced options not available through the visual interface. This is useful when you need to:
+- Combine options that the GUI doesn't provide
+- Apply specialized parameters for particular encoding scenarios
+- Test different muxing configurations without creating separate project files
+
+**How to edit:**
+1. Click in the "Meta file" text area to position your cursor
+2. Edit the meta file content directly (add/remove/modify lines)
+3. The GUI will remember your changes and use the edited version when you click "Start muxing"
+
+**Reverting changes:**
+- If you've manually edited the meta file and want to go back to the auto-generated version, click the **"Reset meta to auto-generated"** button
+- This will discard your manual edits and regenerate the meta file based on current GUI settings
+
+**Saving edited meta files:**
+- Use the **"Save meta file"** button to save your edited meta file as a `.meta` project file
+- This allows you to reuse complex configurations later
+- When you load the saved `.meta` file from the command line, it will use your custom settings
+
+**Note:** Once you manually edit the meta file, subsequent GUI changes will no longer automatically update it. You can reset it at any time using the "Reset meta to auto-generated" button, or make additional manual edits as needed.
+
+### TrueHD + AC-3 Compatibility Core Merge in the GUI
+
+When working with Dolby TrueHD and AC-3 tracks in Matroska files, the GUI provides options to automatically merge them into a Blu-ray compatible format.
+
+**GUI usage:**
+
+Select the **TRUE-HD** track, then set:
+- `track=` to the TrueHD Matroska track number
+- **Merge AC-3 track** to the AC-3 Matroska track number (when the AC-3 exists as a track in the MKV), or
+- **Merge AC-3 file** to a standalone `.ac3` file (when the MKV does not contain an AC-3 track)
+
+The GUI will emit either `merge-ac3-track=<n>` or `merge-ac3-file="path"` into the meta preview.
+
+**If the MKV has no AC-3 track:**
+
+Create an AC-3 compatibility stream from the TrueHD audio with FFmpeg (choose the correct audio index for `0:a:N`):
+
+```
+ffmpeg -i input.mkv -map 0:a:0 -c:a ac3 -b:a 640k -ac 6 compat.ac3
+```
+
+Then either:
+- use **Merge AC-3 file** / `merge-ac3-file="compat.ac3"` directly, or
+- **remux** `compat.ac3` back into the MKV as a separate audio track (e.g. with `mkvmerge`) and use **Merge AC-3 track** / `merge-ac3-track` with the new AC-3 track number.
+
 ## Command Line
 
 Alternatively you can use tsMuxer via the command-line. 
@@ -104,10 +154,9 @@ stretch           | Stretch audio by a given factor. Can be a decimal value or a
 merge-ac3-track   | **MKV only, A_MLP only.** Matroska track number of a classic AC-3 stream to interleave with this TrueHD track for Blu-ray-style muxing. Requires `track=<TrueHD track number>`. Do not add the AC-3 track as a separate meta line.
 merge-ac3-file    | **A_MLP only.** Path to an external classic AC-3 (`.ac3`) file to interleave with a standalone TrueHD (`.thd`) stream for Blu-ray-style muxing.
 
-### TrueHD + AC-3 compatibility core merge (MKV)
+### TrueHD + AC-3 Compatibility Core Merge
 
-Some remuxed Blu-ray MKVs store Dolby TrueHD and the AC-3 compatibility track as **separate tracks**. For Blu-ray
-output, tsMuxer can merge them into the Blu-ray style interleaved TrueHD+AC-3 stream during muxing.
+Some remuxed Blu-ray MKVs store Dolby TrueHD and the AC-3 compatibility track as **separate tracks**. For Blu-ray output, tsMuxer can merge them into the Blu-ray style interleaved TrueHD+AC-3 stream during muxing.
 
 - **Note**: You can merge either:
   - an **AC-3 Matroska track** from the same MKV (`merge-ac3-track`), or
@@ -121,29 +170,7 @@ V_MPEG4/ISO/AVC, "movie.mkv", track=1
 A_MLP, "movie.mkv", track=2, merge-ac3-track=3
 ```
 
-#### GUI usage
-
-Select the **TRUE-HD** track, then set:
-- `track=` to the TrueHD Matroska track number
-- **Merge AC-3 track** to the AC-3 Matroska track number (when the AC-3 exists as a track in the MKV), or
-- **Merge AC-3 file** to a standalone `.ac3` file (when the MKV does not contain an AC-3 track)
-
-The GUI will emit either `merge-ac3-track=<n>` or `merge-ac3-file="path"` into the meta preview.
-
-#### If the MKV has no AC-3 track
-
-Create an AC-3 compatibility stream from the TrueHD audio with FFmpeg (choose the correct audio index for `0:a:N`):
-
-```
-ffmpeg -i input.mkv -map 0:a:0 -c:a ac3 -b:a 640k -ac 6 compat.ac3
-```
-
-Then either:
-- use **Merge AC-3 file** / `merge-ac3-file="compat.ac3"` directly, or
-- **remux** `compat.ac3` back into the MKV as a separate audio track (e.g. with `mkvmerge`) and use
-  **Merge AC-3 track** / `merge-ac3-track` with the new AC-3 track number.
-
-### TrueHD (`.thd`) + AC-3 (`.ac3`) merge (elementary streams)
+### TrueHD (`.thd`) + AC-3 (`.ac3`) Merge (Elementary Streams)
 
 If you have standalone TrueHD and AC-3 files, you can merge them directly:
 

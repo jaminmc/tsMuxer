@@ -3229,6 +3229,11 @@
         <translation>保存项目文件</translation>
     </message>
     <message>
+        <location filename="../tsmuxerwindow.ui" line="2830"/>
+        <source>Reset meta to auto-generated</source>
+        <translation>重置meta为自动生成</translation>
+    </message>
+    <message>
         <location filename="../tsmuxerwindow.cpp" line="53"/>
         <source>All files</source>
         <translation>所有文件</translation>

@@ -3229,6 +3229,11 @@
         <translation>Guardar archivo de proyecto</translation>
     </message>
     <message>
+        <location filename="../tsmuxerwindow.ui" line="2830"/>
+        <source>Reset meta to auto-generated</source>
+        <translation>Restablecer meta a generado automáticamente</translation>
+    </message>
+    <message>
         <location filename="../tsmuxerwindow.cpp" line="53"/>
         <source>All files</source>
         <translation>Todos los archivos</translation>

@@ -85,6 +85,8 @@ class TsMuxerWindow : public QWidget
     void saveFileDialog();
     void startMuxing();
     void saveMetaFileBtnClick();
+    void onResetMetaBtnClick();
+    void onMetaTextChanged();
     void continueAppendFile();
     void continueAddFile();
     void onTsMuxerCodecInfoReceived();
@@ -193,6 +195,8 @@ class TsMuxerWindow : public QWidget
     bool m_fileDialogOpen;
     /// When true, custom chapter text was edited by the user; do not overwrite from input file marks.
     bool m_customChaptersUserOverride;
+    /// When true, meta file was edited by the user; do not auto-regenerate.
+    bool m_metaUserOverride;
     QnCheckBoxedHeaderView* m_header;
     QString lastSourceDir;
 

@@ -3229,6 +3229,11 @@
         <translation>Metadatei speichern</translation>
     </message>
     <message>
+        <location filename="../tsmuxerwindow.ui" line="2830"/>
+        <source>Reset meta to auto-generated</source>
+        <translation>Meta auf Auto-Generated zurücksetzen</translation>
+    </message>
+    <message>
         <location filename="../tsmuxerwindow.cpp" line="53"/>
         <source>All files</source>
         <translation>Alle Dateien</translation>

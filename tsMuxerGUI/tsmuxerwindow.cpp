@@ -368,7 +368,8 @@ TsMuxerWindow::TsMuxerWindow()
       m_updateMeta(true),
       m_3dMode(false),
       m_fileDialogOpen(false),
-      m_customChaptersUserOverride(false)
+      m_customChaptersUserOverride(false),
+      m_metaUserOverride(false)
 {
     ui->setupUi(this);
     setUiMetaItemsData();
@@ -515,6 +516,8 @@ TsMuxerWindow::TsMuxerWindow()
     connect(ui->btnBrowse, &QAbstractButton::clicked, this, &TsMuxerWindow::saveFileDialog);
     connect(ui->buttonMux, &QAbstractButton::clicked, this, &TsMuxerWindow::startMuxing);
     connect(ui->buttonSaveMeta, &QAbstractButton::clicked, this, &TsMuxerWindow::saveMetaFileBtnClick);
+    connect(ui->buttonResetMeta, &QAbstractButton::clicked, this, &TsMuxerWindow::onResetMetaBtnClick);
+    connect(ui->memoMeta, &QPlainTextEdit::textChanged, this, &TsMuxerWindow::onMetaTextChanged);
     connect(ui->radioButtonOutoutInInput, &QAbstractButton::clicked, this, &TsMuxerWindow::onSavedParamChanged);
     connect(ui->defaultAudioTrackComboBox, comboBoxIndexChanged, this, &TsMuxerWindow::updateMetaLines);
     connect(ui->defaultSubTrackComboBox, comboBoxIndexChanged, this, &TsMuxerWindow::updateMetaLines);
@@ -2120,6 +2123,10 @@ void TsMuxerWindow::updateMetaLines()
     if (!m_updateMeta || disableUpdatesCnt > 0)
         return;
 
+    if (m_metaUserOverride)
+        return;
+
+    bool wasBlocked = ui->memoMeta->blockSignals(true);
     ui->memoMeta->clear();
     QString metaContent;
     metaContent.append(getMuxOpts() + '\n');
@@ -2210,6 +2217,7 @@ void TsMuxerWindow::updateMetaLines()
         }
     }
     ui->memoMeta->setPlainText(metaContent);
+    ui->memoMeta->blockSignals(wasBlocked);
 }
 
 void TsMuxerWindow::onFontBtnClicked()
@@ -2778,6 +2786,17 @@ bool TsMuxerWindow::saveMetaFile(const QString& metaName)
     file.write(metaText);
     file.close();
     return true;
+}
+
+void TsMuxerWindow::onMetaTextChanged()
+{
+    m_metaUserOverride = true;
+}
+
+void TsMuxerWindow::onResetMetaBtnClick()
+{
+    m_metaUserOverride = false;
+    updateMetaLines();
 }
 
 void TsMuxerWindow::closeEvent(QCloseEvent* event)

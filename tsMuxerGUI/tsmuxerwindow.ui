@@ -2782,13 +2782,10 @@ p, li { white-space: pre-wrap; }
           <item>
            <widget class="QPlainTextEdit" name="memoMeta">
             <property name="undoRedoEnabled">
-             <bool>false</bool>
-            </property>
-            <property name="readOnly">
              <bool>true</bool>
             </property>
-            <property name="textInteractionFlags">
-             <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+            <property name="readOnly">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
@@ -2871,6 +2868,31 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="text">
         <string>Save meta file</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="buttonResetMeta">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>128</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>256</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Reset meta to auto-generated</string>
        </property>
       </widget>
      </item>
@@ -2993,6 +3015,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>textEdit</tabstop>
   <tabstop>buttonMux</tabstop>
   <tabstop>buttonSaveMeta</tabstop>
+  <tabstop>buttonResetMeta</tabstop>
   <tabstop>radioButton_6</tabstop>
   <tabstop>radioButton_4</tabstop>
   <tabstop>radioButton_5</tabstop>

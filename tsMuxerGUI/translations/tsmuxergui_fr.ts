@@ -3229,6 +3229,11 @@
         <translation>Sauvegarder le fichier Meta</translation>
     </message>
     <message>
+        <location filename="../tsmuxerwindow.ui" line="2830"/>
+        <source>Reset meta to auto-generated</source>
+        <translation>Réinitialiser le meta à auto-générés</translation>
+    </message>
+    <message>
         <location filename="../tsmuxerwindow.cpp" line="53"/>
         <source>All files</source>
         <translation>Tous les fichiers</translation>

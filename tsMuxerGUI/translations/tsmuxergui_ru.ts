@@ -3229,6 +3229,11 @@
         <translation>Сохранить проект</translation>
     </message>
     <message>
+        <location filename="../tsmuxerwindow.ui" line="2830"/>
+        <source>Reset meta to auto-generated</source>
+        <translation>Сбросить мета на авто-генерированный</translation>
+    </message>
+    <message>
         <location filename="../tsmuxerwindow.cpp" line="53"/>
         <source>All files</source>
         <translation>Все файлы</translation>
