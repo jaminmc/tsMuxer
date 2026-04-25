@@ -2788,10 +2788,7 @@ bool TsMuxerWindow::saveMetaFile(const QString& metaName)
     return true;
 }
 
-void TsMuxerWindow::onMetaTextChanged()
-{
-    m_metaUserOverride = true;
-}
+void TsMuxerWindow::onMetaTextChanged() { m_metaUserOverride = true; }
 
 void TsMuxerWindow::onResetMetaBtnClick()
 {
