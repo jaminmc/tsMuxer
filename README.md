@@ -9,7 +9,7 @@ This project is for tsMuxer - a transport stream muxer for remuxing/muxing eleme
 EVO/VOB/MPG, MKV/MKA, MP4/MOV, TS, M2TS to TS, M2TS, or MKV.
 
 Supported video codecs H.264/AVC, H.265/HEVC, H.266/VVC (Alpha release), AV1, VC-1, MPEG2. 
-Supported audio codecs AAC, AC3 / E-AC3(DD+), DTS/ DTS-HD, TrueHD.
+Supported audio codecs AAC, AC3 / E-AC3(DD+), DTS/ DTS-HD, TrueHD, Opus, FLAC, LPCM, MP3.
 
 **TrueHD note (Blu-ray output):** Blu-ray players typically expect Dolby TrueHD to be muxed in a Blu-ray style
 interleaved stream with an AC-3 compatibility core. If your MKV stores TrueHD and AC-3 as separate tracks, tsMuxer
@@ -55,7 +55,9 @@ tsMuxer is written in C++20. It can be compiled for Windows, Linux and Mac.
 **Build Requirements:**
 - CMake 3.12 or later
 - C++20 compatible compiler (GCC 10+, Clang 11+, MSVC 2019+)
-- Qt6 for the GUI 
+- Qt6 for the GUI (requires Windows 8 or later; a separate Qt5 build is available for Windows 7)
+
+**Windows 7 Users:** Separate Qt5 builds are available for both 32-bit and 64-bit. See build artifacts or refer to docs/COMPILING.md for build instructions. 
 
 ## History
 
@@ -74,7 +76,6 @@ Please see [USAGE.md](docs/USAGE.md) for usage instructions.
 The following is a list of changes that will need to be made to the original source code and project in general:
 
 * the program doesn't support MPEG-4 ASP, even though MPEG-4 ASP is defined in the TS specification
-* no Opus audio support
 * has issues with 24-bit DTS Express
 * issues with the 3D plane lists when there are mismatches between the MPLS and M2TS
 * AV1 in MPEG-TS playback depends on player/demuxer support for the AOM draft specification (not yet widely supported as of 2026)

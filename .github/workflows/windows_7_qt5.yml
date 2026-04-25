@@ -1,0 +1,41 @@
+name: Build for Windows 7 (Qt5 compatibility)
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      name: checkout
+
+    - name: Free disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker image prune --all --force
+
+    - name: Pull Docker image
+      run: docker pull jaminmc/tsmuxer_build:latest
+      
+    - run: rm -f bin/.gitkeep
+      name: clean-bin-folder
+      
+    - name: build-for-windows-7
+      run: >
+        docker run --rm
+        -v ${{ github.workspace }}:/work -w /work
+        jaminmc/tsmuxer_build:latest
+        ./scripts/rebuild_mxe_with_gui_qt5_docker.sh
+      
+    - uses: actions/upload-artifact@v4
+      with:
+         name: tsMuxer-w64-qt5
+         path: bin/w64-qt5.zip
+      name: upload-artefact

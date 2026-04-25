@@ -9,7 +9,9 @@ The following sections outline how to build tsMuxer and tsMuxerGUI for your chos
   - GCC 10 or later
   - Clang 11 or later
   - MSVC 2019 or later
-- **Qt**: Qt6 for the GUI component
+- **Qt**: Qt6 for the GUI component (Qt5 available for Windows 7 compatibility)
+
+**Note on Windows Compatibility:** The Qt6 GUI (tsMuxerGUI) requires Windows 8 and later. A separate Qt5 build is available for Windows 7 users (see Windows 7 build artifacts or the Windows (MXE on Linux) section below for Qt5 build instructions).
 
 ## Docker (All Platforms)
 
@@ -198,6 +200,35 @@ Or run the following to build the GUI as well:
 # build the project
 ./scripts/rebuild_mxe_with_gui.sh
 ```
+
+### Windows 7 (Qt5 build for compatibility)
+
+For Windows 7 compatibility, separate builds using Qt5.13 are available for both 32-bit and 64-bit. Qt6 requires Windows 8 or later, but Qt5.13 supports Windows 7.
+
+**64-bit build (recommended for modern systems):**
+
+```
+docker run -it --rm -v $(pwd):/work -w /work jaminmc/tsmuxer_build:latest ./scripts/rebuild_mxe_with_gui_qt5_docker.sh
+```
+
+This will produce 64-bit binaries in `bin/w64-qt5/` that are compatible with Windows 7 (64-bit).
+
+**32-bit build (for legacy 32-bit Windows 7 systems):**
+
+```
+docker run -it --rm -v $(pwd):/work -w /work jaminmc/tsmuxer_build:latest ./scripts/rebuild_mxe32_with_gui_qt5_docker.sh
+```
+
+This will produce 32-bit binaries in `bin/w32-qt5/` that are compatible with Windows 7 (32-bit).
+
+Alternatively, if building locally with MXE and Qt5 installed:
+
+```
+./scripts/rebuild_mxe_with_gui.sh     # for 64-bit
+./scripts/rebuild_mxe32_with_gui.sh   # for 32-bit (after ensuring Qt5 is selected)
+```
+
+The output will be the same Windows 7-compatible binaries.
 
 ## Windows (Msys2)
 
