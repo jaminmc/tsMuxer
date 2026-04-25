@@ -1,0 +1,22 @@
+name: Cleanup Old Artifacts
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC to clean up old artifacts
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Delete artifacts older than 30 days
+      uses: geekyeggo/delete-artifact@v2
+      with:
+        name: '*'
+        minCreatedAt: '30 days'
+    
+    - name: Log cleanup completion
+      run: |
+        echo "::notice::Artifact cleanup completed - removed artifacts older than 30 days"

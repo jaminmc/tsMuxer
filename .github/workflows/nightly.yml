@@ -11,6 +11,7 @@ jobs:
     outputs:
       status: ${{ steps.check.outputs.status }}
       version: ${{ steps.check.outputs.version }}
+      skip_reason: ${{ steps.check.outputs.skip_reason }}
     
     steps:
     - uses: actions/checkout@v4
@@ -22,9 +23,24 @@ jobs:
       id: check
       shell: bash {0}
       run: |
-        ver=$(./.github/workflows/nightly_check.sh)
-        echo "status=$?" >> $GITHUB_OUTPUT
-        echo "version=${ver}" >> $GITHUB_OUTPUT
+        set -e
+        
+        # Check if HEAD already has a nightly tag
+        if git describe --tags --contains --match 'nightly-*' HEAD >/dev/null 2>&1; then
+          # HEAD already tagged, skip build
+          echo "status=1" >> $GITHUB_OUTPUT
+          echo "skip_reason=HEAD already has nightly tag" >> $GITHUB_OUTPUT
+          echo "::notice::Skipping nightly build - HEAD already has nightly tag"
+          exit 0
+        else
+          # New code since last nightly, proceed with build
+          ver="$(date +%Y-%m-%d-%H-%M-%S)"
+          echo "status=0" >> $GITHUB_OUTPUT
+          echo "version=${ver}" >> $GITHUB_OUTPUT
+          echo "skip_reason=" >> $GITHUB_OUTPUT
+          echo "::notice::Building nightly for version: ${ver}"
+          exit 0
+        fi
 
     - name: create-release
       id: create
@@ -36,6 +52,15 @@ jobs:
         prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Log workflow status
+      if: always()
+      run: |
+        if [ "${{ steps.check.outputs.status }}" == "0" ]; then
+          echo "::notice::Nightly check passed, proceeding to build"
+        else
+          echo "::notice::Nightly check skipped: ${{ steps.check.outputs.skip_reason }}"
+        fi
   
   build-docker:
   
