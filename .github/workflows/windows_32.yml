@@ -39,3 +39,11 @@ jobs:
          name: tsMuxer-w32
          path: bin/w32.zip
       name: upload-artefact
+
+    - name: Upload to Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: bin/w32.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

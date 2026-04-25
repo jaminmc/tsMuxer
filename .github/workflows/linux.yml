@@ -39,3 +39,11 @@ jobs:
          name: tsMuxer-linux
          path: bin/lnx.zip
       name: upload-artefact
+
+    - name: Upload to Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: bin/lnx.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
