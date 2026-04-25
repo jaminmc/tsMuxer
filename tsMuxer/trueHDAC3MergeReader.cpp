@@ -109,6 +109,7 @@ int TrueHDAC3MergeReader::readPacket(AVPacket& avPacket)
 {
     while (true)
     {
+        // Priority 1: Return pending AC3 packet if waiting for it
         if (m_thdDemuxWaitAc3 && !m_delayedAc3Buffer.isEmpty())
         {
             avPacket = m_delayedAc3Packet;
@@ -122,6 +123,7 @@ int TrueHDAC3MergeReader::readPacket(AVPacket& avPacket)
             return 0;
         }
 
+        // Priority 2: Return AC3 frame if we're in AC3 wait state and have queued frames
         if (m_thdDemuxWaitAc3 && m_delayedAc3Buffer.isEmpty() && !m_ac3FrameQueue.empty())
         {
             Ac3QueuedFrame q = std::move(m_ac3FrameQueue.front());
@@ -145,16 +147,15 @@ int TrueHDAC3MergeReader::readPacket(AVPacket& avPacket)
             return 0;
         }
 
+        // Priority 3: Need more AC3 data if waiting and don't have any
         if (m_thdDemuxWaitAc3 && m_ac3FrameQueue.empty())
             return AbstractStreamReader::NEED_MORE_DATA;
 
-        if (!m_thdDemuxWaitAc3 && m_delayedAc3Buffer.isEmpty())
-        {
-            if (m_ac3FrameQueue.empty())
-                return AbstractStreamReader::NEED_MORE_DATA;
+        // Priority 4: Pre-fill delayed buffer for next AC3 emission when not waiting
+        if (!m_thdDemuxWaitAc3 && m_delayedAc3Buffer.isEmpty() && !m_ac3FrameQueue.empty())
             fillDelayedFromQueue();
-        }
 
+        // Read next TrueHD packet
         const int rez = SimplePacketizerReader::readPacket(avPacket);
         if (rez != 0)
             return rez;
@@ -163,7 +164,9 @@ int TrueHDAC3MergeReader::readPacket(AVPacket& avPacket)
 
         m_totalTHDSamples += m_samples;
         m_demuxedTHDSamplesForAc3 += m_samples;
-        if (m_ac3SamplesPerSyncFrame > 0 && m_demuxedTHDSamplesForAc3 >= m_ac3SamplesPerSyncFrame)
+        // Trigger AC3 wait when we have enough TrueHD samples and AC3 frames available
+        if (m_ac3SamplesPerSyncFrame > 0 && m_demuxedTHDSamplesForAc3 >= m_ac3SamplesPerSyncFrame &&
+            !m_ac3FrameQueue.empty())
         {
             m_demuxedTHDSamplesForAc3 -= m_ac3SamplesPerSyncFrame;
             m_thdDemuxWaitAc3 = true;

@@ -222,9 +222,9 @@ int AC3StreamReader::readPacketTHD(AVPacket& avPacket)
 
             m_totalTHDSamples += mlp.m_samples;
             m_demuxedTHDSamples += mlp.m_samples;
-            if (m_demuxedTHDSamples >= m_samples)
+            if (m_demuxedTHDSamples >= mlp.m_samples)
             {
-                m_demuxedTHDSamples -= m_samples;
+                m_demuxedTHDSamples -= mlp.m_samples;
                 m_thdDemuxWaitAc3 = true;
             }
             return 0;
