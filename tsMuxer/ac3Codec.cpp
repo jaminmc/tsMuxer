@@ -529,6 +529,15 @@ bool AC3Codec::testDecodeTestFrame(uint8_t* buf, uint8_t* end) const
 
 uint64_t AC3Codec::getFrameDuration() const
 {
+    // When extracting the AC-3 core, AC-3 frames carry timing and skipped
+    // E-AC3 extension frames must not advance PTS.
+    if (m_downconvertToAC3)
+    {
+        if (m_bsid <= 10)
+            return m_frameDuration;
+        return 0;
+    }
+
     // EAC3 dependent frame : wait for next independent frame
     if (!m_bit_rate && m_strmtyp == 1)
         return 0;

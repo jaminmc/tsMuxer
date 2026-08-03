@@ -3398,8 +3398,8 @@
     </message>
     <message>
         <location filename="../tsmuxerwindow.cpp" line="1048"/>
-        <source>Downconvert E-AC3 to AC3</source>
-        <translation type="unfinished"></translation>
+        <source>Extract AC-3 core</source>
+        <translation>Extract AC-3 core</translation>
     </message>
     <message>
         <location filename="../tsmuxerwindow.cpp" line="1181"/>

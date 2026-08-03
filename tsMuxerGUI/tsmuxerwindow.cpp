@@ -1208,7 +1208,7 @@ void TsMuxerWindow::trackLVItemSelectionChanged()
             else if (codecInfo->displayName == "TRUE-HD")
                 ui->dtsDwnConvert->setText(tr("Downconvert TRUE-HD to AC3"));
             else if (codecInfo->displayName == "E-AC3 (DD+)")
-                ui->dtsDwnConvert->setText(tr("Downconvert E-AC3 to AC3"));
+                ui->dtsDwnConvert->setText(tr("Extract AC-3 core"));
             else
                 ui->dtsDwnConvert->setText(tr("Downconvert HD audio"));
             ui->dtsDwnConvert->setEnabled(!codecInfo->descr.contains("(core 0Kbps)") &&

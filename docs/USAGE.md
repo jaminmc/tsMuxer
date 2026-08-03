@@ -147,7 +147,7 @@ Parameter         | Description
 ---               | --- 
 timeshift         | Shift audio track by the given number of milliseconds. Can be negative. 
 down-to-dts       | Available only for DTS-HD tracks. Filter out HD part. 
-down-to-ac3       | Available only for TRUE-HD tracks. Filter out HD part. 
+down-to-ac3       | Extract the AC-3 core. Available for TRUE-HD tracks (filters out the TrueHD part) and for E-AC3 (DD+) tracks that contain an embedded AC-3 core (keeps classic AC-3 frames, drops E-AC3 extension frames; no re-encode). E-AC3 streams with no AC-3 core (shown as core 0Kbps) cannot use this option.
 secondary         | Mux as secondary audio.  Available for DD+ and DTS-Express. 
 default           | Mark this track as the default when muxing to Blu-ray.
 stretch           | Stretch audio by a given factor. Can be a decimal value or a fraction (e.g. 25/24). Useful for fixing A/V sync issues caused by frame rate discrepancies.

@@ -21,6 +21,7 @@ Some of the major features include:
 * Ability to change level for H.264 streams
 * Ability to shift a sound tracks
 * Ability to extract DTS core from DTS-HD
+* Ability to extract AC-3 core from E-AC3 (DD+) and TrueHD
 * Ability to join files
 * Output/Author to compliant Blu-ray Disc or AVCHD
 * Matroska (MKV/MKA) muxing support
