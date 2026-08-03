@@ -2,29 +2,33 @@ name: Nightly Releases
 
 on:
   schedule:
-    - cron:  '1 1 * * *'
+    - cron: '1 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    
+
     outputs:
       status: ${{ steps.check.outputs.status }}
       version: ${{ steps.check.outputs.version }}
       skip_reason: ${{ steps.check.outputs.skip_reason }}
-    
+
     steps:
     - uses: actions/checkout@v4
       name: checkout
       with:
         fetch-depth: 0
-    
+
     - name: nightly-check
       id: check
       shell: bash {0}
       run: |
         set -e
-        
+
         # Check if HEAD already has a nightly tag
         if git describe --tags --contains --match 'nightly-*' HEAD >/dev/null 2>&1; then
           # HEAD already tagged, skip build
@@ -52,7 +56,7 @@ jobs:
         prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Log workflow status
       if: always()
       run: |
@@ -61,12 +65,12 @@ jobs:
         else
           echo "::notice::Nightly check skipped: ${{ steps.check.outputs.skip_reason }}"
         fi
-  
+
   build-linux:
     needs: check
     if: needs.check.outputs.status == 0
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
       name: checkout
@@ -74,14 +78,15 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libfreetype-dev zlib1g-dev
-      
+        sudo apt-get install -y libfreetype-dev zlib1g-dev ninja-build zip
+
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.7.*'
         modules: 'qtmultimedia'
-      
+        cache: true
+
     - run: ./scripts/rebuild_linux_with_gui.sh
       name: build-for-linux
 
@@ -93,111 +98,32 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-windows:
+  build-windows-64:
     needs: check
     if: needs.check.outputs.status == 0
     runs-on: windows-latest
-    strategy:
-      matrix:
-        include:
-          - arch: "x86_64"
-            artifact: "w64.zip"
-            cache_path: "${{ runner.temp }}\\qt6-install"
-            cache_key: "qt6-windows7-x64-6.8.3"
-            cmake_args: ""
-          - arch: "x86"
-            artifact: "w32.zip"
-            cache_path: "${{ runner.temp }}\\qt6-install-x86"
-            cache_key: "qt6-windows7-x86-6.8.3"
-            cmake_args: "-A Win32"
-    
+
     steps:
     - uses: actions/checkout@v4
       name: checkout
 
-    - name: Cache Qt6 Windows 7 Build
-      id: cache-qt6
-      uses: actions/cache@v4
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
       with:
-        path: ${{ matrix.cache_path }}
-        key: ${{ matrix.cache_key }}-${{ hashFiles('.github/workflows/nightly.yml') }}
-        restore-keys: |
-          ${{ matrix.cache_key }}-
-
-    - name: Setup Qt6 Windows 7 (Build from source)
-      if: steps.cache-qt6.outputs.cache-hit != 'true'
-      run: |
-        $QT_SRC_ZIP = "${{ runner.temp }}\qt6.zip"
-        $QT_PATCH_ZIP = "${{ runner.temp }}\qt6windows7-patches.zip"
-        $QT_SRC_PATH = "${{ runner.temp }}\qt6-src-${{ matrix.arch }}"
-        $QT_BUILD_PATH = "${{ runner.temp }}\qt6-build-${{ matrix.arch }}"
-        $QT_INSTALL_PATH = "${{ matrix.cache_path }}"
-        
-        Write-Host "Downloading official Qt6 source..."
-        $QT_SRC_URL = "https://github.com/qt/qtbase/archive/refs/tags/v6.8.3.zip"
-        Invoke-WebRequest -Uri $QT_SRC_URL -OutFile $QT_SRC_ZIP
-        
-        Write-Host "Downloading qt6windows7 patches..."
-        $QT_PATCH_URL = "https://github.com/crystalidea/qt6windows7/archive/refs/tags/v6.8.3.zip"
-        Invoke-WebRequest -Uri $QT_PATCH_ZIP -OutFile $QT_PATCH_ZIP
-        
-        Write-Host "Extracting Qt6 source..."
-        Expand-Archive -Path $QT_SRC_ZIP -DestinationPath "${{ runner.temp }}" -Force
-        Rename-Item -Path "${{ runner.temp }}\qtbase-6.8.3" -NewName $QT_SRC_PATH -Force
-        
-        Write-Host "Extracting qt6windows7 patches..."
-        $QT_PATCH_EXTRACT = "${{ runner.temp }}\qt6windows7-patches-${{ matrix.arch }}"
-        Expand-Archive -Path $QT_PATCH_ZIP -DestinationPath $QT_PATCH_EXTRACT -Force
-        
-        Write-Host "Applying qt6windows7 patches..."
-        $PatchSrcPath = "$QT_PATCH_EXTRACT\qt6windows7-6.8.3\qtbase\src"
-        $QtSrcPath = "$QT_SRC_PATH\src"
-        Write-Host "Patch source: $PatchSrcPath"
-        Write-Host "Qt destination: $QtSrcPath"
-        Get-ChildItem -Path $PatchSrcPath -Recurse | ForEach-Object {
-          $RelativePath = $_.FullName.Substring($PatchSrcPath.Length + 1)
-          $DestPath = Join-Path $QtSrcPath $RelativePath
-          if ($_.PSIsContainer) {
-            if (!(Test-Path $DestPath)) { mkdir $DestPath | Out-Null }
-          } else {
-            Copy-Item -Path $_.FullName -Destination $DestPath -Force
-          }
-        }
-        Write-Host "Patches applied successfully"
-        
-        Write-Host "Creating build directory..."
-        mkdir $QT_BUILD_PATH
-        mkdir $QT_INSTALL_PATH
-        
-        Write-Host "Configuring Qt6 build (${{ matrix.arch }})..."
-        cd $QT_BUILD_PATH
-        $cmake_cmd = "cmake `"$QT_SRC_PATH`" -DCMAKE_INSTALL_PREFIX=`"$QT_INSTALL_PATH`" -DCMAKE_BUILD_TYPE=Release -DQT_BUILD_EXAMPLES=OFF -DQT_BUILD_TESTS=OFF -DQT_BUILD_DOCUMENTATION=OFF -DFEATURE_tracepointgen=OFF"
-        if ("${{ matrix.arch }}" -eq "x86") {
-          $cmake_cmd = "cmake `"$QT_SRC_PATH`" -A Win32 -DCMAKE_INSTALL_PREFIX=`"$QT_INSTALL_PATH`" -DCMAKE_BUILD_TYPE=Release -DQT_BUILD_EXAMPLES=OFF -DQT_BUILD_TESTS=OFF -DQT_BUILD_DOCUMENTATION=OFF -DFEATURE_tracepointgen=OFF"
-        }
-        Invoke-Expression $cmake_cmd
-        
-        Write-Host "Building Qt6 (${{ matrix.arch }}) (this may take 30+ minutes)..."
-        cmake --build . --config Release -j ([Environment]::ProcessorCount)
-        
-        Write-Host "Installing Qt6..."
-        cmake --install . --config Release
-        
-        Write-Host "Qt6 ${{ matrix.arch }} with Windows 7 patches build complete!"
+        version: '6.7.*'
+        modules: 'qtmultimedia'
+        cache: true
 
     - name: Build tsMuxer
       run: |
-        $QT_INSTALL_PATH = "${{ matrix.cache_path }}"
-        
         mkdir build
         cd build
-        $cmake_cmd = "cmake ../ -DCMAKE_PREFIX_PATH=`"$QT_INSTALL_PATH`" -DTSMUXER_GUI=ON -DCMAKE_BUILD_TYPE=Release"
-        if ("${{ matrix.arch }}" -eq "x86") {
-          $cmake_cmd = "cmake ../ -A Win32 -DCMAKE_PREFIX_PATH=`"$QT_INSTALL_PATH`" -DTSMUXER_GUI=ON -DCMAKE_BUILD_TYPE=Release"
-        }
-        Invoke-Expression $cmake_cmd
+        cmake ../ `
+          -DTSMUXER_GUI=ON `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DWITHOUT_PKGCONFIG=TRUE
         cmake --build . --config Release
-        
+
         if (!(Test-Path "../bin")) { mkdir "../bin" }
         Copy-Item -Path "tsMuxer/Release/tsmuxer.exe" -Destination "../bin/tsMuxeR.exe" -Force
         if (Test-Path "tsMuxerGUI/Release/tsmuxergui.exe") {
@@ -209,15 +135,52 @@ jobs:
       run: |
         cd bin
         if (Test-Path "tsMuxerGUI.exe") {
-          7z a -y ${{ matrix.artifact }} tsMuxeR.exe tsMuxerGUI.exe
-        } else {
-          7z a -y ${{ matrix.artifact }} tsMuxeR.exe
+          windeployqt --release --no-translations tsMuxerGUI.exe
         }
+        if (Test-Path "w64.zip") { Remove-Item "w64.zip" }
+        7z a -y w64.zip * '-xr!w64.zip'
 
     - name: Upload Windows Build
       uses: softprops/action-gh-release@v2
       with:
-        files: ./bin/${{ matrix.artifact }}
+        files: ./bin/w64.zip
+        tag_name: nightly-${{ needs.check.outputs.version }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows-32:
+    needs: check
+    if: needs.check.outputs.status == 0
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      name: checkout
+
+    - name: Build tsMuxer (CLI only)
+      run: |
+        mkdir build
+        cd build
+        cmake ../ `
+          -A Win32 `
+          -DTSMUXER_GUI=OFF `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DWITHOUT_PKGCONFIG=TRUE
+        cmake --build . --config Release
+
+        if (!(Test-Path "../bin")) { mkdir "../bin" }
+        Copy-Item -Path "tsMuxer/Release/tsmuxer.exe" -Destination "../bin/tsMuxeR.exe" -Force
+        cd ..
+
+    - name: Package Build
+      run: |
+        cd bin
+        7z a -y w32.zip tsMuxeR.exe
+
+    - name: Upload Windows Build
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ./bin/w32.zip
         tag_name: nightly-${{ needs.check.outputs.version }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -225,23 +188,24 @@ jobs:
   build-macos:
     needs: check
     if: needs.check.outputs.status == 0
-    runs-on: macos-latest
+    runs-on: macos-15
     strategy:
       matrix:
         include:
           - arch: arm64
           - arch: x86_64
-    
+
     steps:
     - uses: actions/checkout@v4
       name: checkout
-      
+
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.7.*'
         modules: 'qtmultimedia'
-      
+        cache: true
+
     - run: ./scripts/build_macos_native.sh
       name: build-for-mac
       env:
@@ -256,4 +220,4 @@ jobs:
         files: build/bin/mac-${{ matrix.arch }}.zip
         tag_name: nightly-${{ needs.check.outputs.version }}
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

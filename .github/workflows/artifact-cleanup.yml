@@ -6,17 +6,38 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Delete artifacts older than 30 days
-      uses: geekyeggo/delete-artifact@v2
-      with:
-        name: '*'
-        minCreatedAt: '30 days'
-    
-    - name: Log cleanup completion
+      env:
+        GH_TOKEN: ${{ github.token }}
+        DAYS_OLD: '30'
       run: |
-        echo "::notice::Artifact cleanup completed - removed artifacts older than 30 days"
+        set -euo pipefail
+
+        CUTOFF="$(date -u -d "${DAYS_OLD} days ago" +%Y-%m-%dT%H:%M:%SZ)"
+        echo "Deleting artifacts created before ${CUTOFF}"
+
+        deleted=0
+        while IFS=$'\t' read -r id name created_at; do
+          [ -n "${id}" ] || continue
+          echo "Deleting ${name} (id=${id}, created_at=${created_at})"
+          gh api --method DELETE \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/actions/artifacts/${id}" >/dev/null
+          deleted=$((deleted + 1))
+        done < <(
+          gh api --paginate \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/actions/artifacts?per_page=100" \
+            --jq ".artifacts[] | select(.created_at < \"${CUTOFF}\") | [.id, .name, .created_at] | @tsv"
+        )
+
+        echo "::notice::Artifact cleanup completed - removed ${deleted} artifact(s) older than ${DAYS_OLD} days"

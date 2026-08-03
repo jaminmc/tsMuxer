@@ -1,13 +1,6 @@
 name: Build GUI for Linux
 
 on:
-  push:
-    branches: [master]
-    paths:
-    - 'tsMuxerGUI/**'
-    - 'tsMuxer/**'
-    - 'libmediation/**'
-    - 'CMakeLists.txt'
   pull_request:
     branches: [master]
     paths:
@@ -15,12 +8,13 @@ on:
     - 'tsMuxer/**'
     - 'libmediation/**'
     - 'CMakeLists.txt'
+    - '.github/workflows/linux_gui.yml'
+    - '.github/workflows/linux_gui.sh'
 
 jobs:
   build-linux-gui:
-
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
       name: checkout
@@ -29,12 +23,13 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libfreetype-dev zlib1g-dev
-      
+
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.7.*'
         modules: 'qtmultimedia'
-      
+        cache: true
+
     - run: ./.github/workflows/linux_gui.sh
       name: build-linux-gui

@@ -3,125 +3,49 @@ name: Build for Windows 32-bit
 on:
   push:
     branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
 
 jobs:
   build:
     runs-on: windows-latest
-    
+
     steps:
     - uses: actions/checkout@v4
       name: checkout
 
-    - name: Cache Qt6 Windows 7 Build
-      id: cache-qt6
-      uses: actions/cache@v4
-      with:
-        path: ${{ runner.temp }}\qt6-install-x86
-        key: qt6-windows7-x86-6.8.3-${{ hashFiles('.github/workflows/windows_32.yml') }}
-        restore-keys: |
-          qt6-windows7-x86-6.8.3-
-
-    - name: Setup Qt6 Windows 7 (Build from source)
-      if: steps.cache-qt6.outputs.cache-hit != 'true'
+    # Qt6 no longer ships official 32-bit MSVC packages, so this job builds the
+    # CLI only. 64-bit GUI is covered by windows_64.yml.
+    - name: Build tsMuxer (CLI only)
       run: |
-        $QT_SRC_ZIP = "${{ runner.temp }}\qt6.zip"
-        $QT_PATCH_ZIP = "${{ runner.temp }}\qt6windows7-patches.zip"
-        $QT_SRC_PATH = "${{ runner.temp }}\qt6-src-x86"
-        $QT_BUILD_PATH = "${{ runner.temp }}\qt6-build-x86"
-        $QT_INSTALL_PATH = "${{ runner.temp }}\qt6-install-x86"
-        
-        Write-Host "Downloading official Qt6 source..."
-        $QT_SRC_URL = "https://github.com/qt/qtbase/archive/refs/tags/v6.8.3.zip"
-        Invoke-WebRequest -Uri $QT_SRC_URL -OutFile $QT_SRC_ZIP
-        
-        Write-Host "Downloading qt6windows7 patches..."
-        $QT_PATCH_URL = "https://github.com/crystalidea/qt6windows7/archive/refs/tags/v6.8.3.zip"
-        Invoke-WebRequest -Uri $QT_PATCH_URL -OutFile $QT_PATCH_ZIP
-        
-        Write-Host "Extracting Qt6 source..."
-        Expand-Archive -Path $QT_SRC_ZIP -DestinationPath "${{ runner.temp }}" -Force
-        Rename-Item -Path "${{ runner.temp }}\qtbase-6.8.3" -NewName $QT_SRC_PATH -Force
-        
-        Write-Host "Extracting qt6windows7 patches..."
-        $QT_PATCH_EXTRACT = "${{ runner.temp }}\qt6windows7-patches"
-        Expand-Archive -Path $QT_PATCH_ZIP -DestinationPath $QT_PATCH_EXTRACT -Force
-        
-        Write-Host "Applying qt6windows7 patches..."
-        $PatchSrcPath = "$QT_PATCH_EXTRACT\qt6windows7-6.8.3\qtbase\src"
-        $QtSrcPath = "$QT_SRC_PATH\src"
-        Write-Host "Patch source: $PatchSrcPath"
-        Write-Host "Qt destination: $QtSrcPath"
-        Get-ChildItem -Path $PatchSrcPath -Recurse | ForEach-Object {
-          $RelativePath = $_.FullName.Substring($PatchSrcPath.Length + 1)
-          $DestPath = Join-Path $QtSrcPath $RelativePath
-          if ($_.PSIsContainer) {
-            if (!(Test-Path $DestPath)) { mkdir $DestPath | Out-Null }
-          } else {
-            Copy-Item -Path $_.FullName -Destination $DestPath -Force
-          }
-        }
-        Write-Host "Patches applied successfully"
-        
-        Write-Host "Creating build directory..."
-        mkdir $QT_BUILD_PATH
-        mkdir $QT_INSTALL_PATH
-        
-        Write-Host "Configuring Qt6 build (32-bit)..."
-        cd $QT_BUILD_PATH
-        cmake "$QT_SRC_PATH" `
-          -A Win32 `
-          -DCMAKE_INSTALL_PREFIX="$QT_INSTALL_PATH" `
-          -DCMAKE_BUILD_TYPE=Release `
-          -DQT_BUILD_EXAMPLES=OFF `
-          -DQT_BUILD_TESTS=OFF `
-          -DQT_BUILD_DOCUMENTATION=OFF `
-          -DFEATURE_tracepointgen=OFF
-        
-        Write-Host "Building Qt6 32-bit (this may take 30+ minutes)..."
-        cmake --build . --config Release -j ([Environment]::ProcessorCount)
-        
-        Write-Host "Installing Qt6..."
-        cmake --install . --config Release
-        
-        Write-Host "Qt6 32-bit with Windows 7 patches build complete!"
-
-    - name: Build tsMuxer
-      run: |
-        $QT_INSTALL_PATH = "${{ runner.temp }}\qt6-install-x86"
-        
         mkdir build
         cd build
         cmake ../ `
           -A Win32 `
-          -DCMAKE_PREFIX_PATH="$QT_INSTALL_PATH" `
-          -DTSMUXER_GUI=ON `
-          -DCMAKE_BUILD_TYPE=Release
+          -DTSMUXER_GUI=OFF `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DWITHOUT_PKGCONFIG=TRUE
         cmake --build . --config Release
-        
+
         if (!(Test-Path "../bin")) { mkdir "../bin" }
         Copy-Item -Path "tsMuxer/Release/tsmuxer.exe" -Destination "../bin/tsMuxeR.exe" -Force
-        if (Test-Path "tsMuxerGUI/Release/tsmuxergui.exe") {
-          Copy-Item -Path "tsMuxerGUI/Release/tsmuxergui.exe" -Destination "../bin/tsMuxerGUI.exe" -Force
-        }
         cd ..
 
     - name: Package Build
       run: |
         cd bin
-        if (Test-Path "tsMuxerGUI.exe") {
-          7z a -y w32.zip tsMuxeR.exe tsMuxerGUI.exe
-        } else {
-          7z a -y w32.zip tsMuxeR.exe
-        }
+        7z a -y w32.zip tsMuxeR.exe
 
     - uses: actions/upload-artifact@v4
       with:
         name: tsMuxer-w32
         path: bin/w32.zip
+        if-no-files-found: error
       name: upload-artifact
 
     - name: Upload to Release
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v2
       with:
         files: bin/w32.zip

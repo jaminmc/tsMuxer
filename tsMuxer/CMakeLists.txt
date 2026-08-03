@@ -102,8 +102,31 @@ if (${PkgConfig_FOUND} AND NOT ${WITHOUT_PKGCONFIG})
     pkg_check_modules_with_static (FREETYPE REQUIRED freetype2)
   endif()
 else()
-  find_package(ZLIB REQUIRED)
-  find_package(Freetype REQUIRED)
+  find_package(ZLIB QUIET)
+  if (NOT ZLIB_FOUND AND WIN32)
+    # Native Windows CI/dev trees often lack a system zlib; build a static
+    # copy so MSVC builds do not depend on vcpkg/MXE/Docker.
+    include(FetchContent)
+    set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+      zlib
+      URL https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
+      URL_HASH SHA256=9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23
+    )
+    FetchContent_MakeAvailable(zlib)
+    if (TARGET zlibstatic)
+      set(ZLIB_LIBRARIES zlibstatic)
+    else()
+      set(ZLIB_LIBRARIES zlib)
+    endif()
+    set(ZLIB_INCLUDE_DIRS ${zlib_SOURCE_DIR} ${zlib_BINARY_DIR})
+  else()
+    find_package(ZLIB REQUIRED)
+  endif()
+  # Windows uses GDI+ for subtitle rendering; FreeType is only needed elsewhere.
+  if (NOT WIN32)
+    find_package(Freetype REQUIRED)
+  endif()
 endif()
 
 target_include_directories(tsmuxer PRIVATE
