@@ -1626,35 +1626,52 @@ int StreamInfo::read()
         }
         m_lastAVRez = 0;
 
-        if (m_mergeAc3ReaderId >= 0)
+        auto* mergeReader = dynamic_cast<TrueHDAC3MergeReader*>(m_streamReader);
+        if (m_mergeAc3ReaderId >= 0 && mergeReader && !mergeReader->ac3Eof())
         {
-            auto* mergeReader = dynamic_cast<TrueHDAC3MergeReader*>(m_streamReader);
-            if (mergeReader)
+            uint32_t ac3Cnt = 0;
+            int ac3Rez = 0;
+            AbstractReader* r = m_mergeAc3DataReader ? m_mergeAc3DataReader : m_dataReader;
+            uint8_t* ac3Data = r->readBlock(m_mergeAc3ReaderId, ac3Cnt, ac3Rez);
+            if (ac3Rez == BufferedFileReader::DATA_NOT_READY)
             {
-                uint32_t ac3Cnt = 0;
-                int ac3Rez = 0;
-                AbstractReader* r = m_mergeAc3DataReader ? m_mergeAc3DataReader : m_dataReader;
-                uint8_t* ac3Data = r->readBlock(m_mergeAc3ReaderId, ac3Cnt, ac3Rez);
-                if (ac3Rez == BufferedFileReader::DATA_NOT_READY || ac3Rez == BufferedFileReader::DATA_DELAYED)
-                {
-                    m_lastAVRez = ac3Rez;
-                    return ac3Rez;
-                }
+                m_lastAVRez = ac3Rez;
+                return ac3Rez;
+            }
+            if (ac3Rez == BufferedFileReader::DATA_EOF || ac3Rez == BufferedFileReader::DATA_EOF2)
+            {
+                if (ac3Data != nullptr && ac3Cnt > 0)
+                    mergeReader->setAc3SideData(ac3Data, ac3Cnt);
+                mergeReader->setAc3Eof();
+            }
+            else if (ac3Rez != BufferedFileReader::DATA_DELAYED && ac3Data != nullptr && ac3Cnt > 0)
+            {
                 mergeReader->setAc3SideData(ac3Data, ac3Cnt);
             }
+            // DATA_DELAYED: do not block TrueHD drain from the shared container demuxer.
         }
 
-        m_data = m_dataReader->readBlock(m_readerID, m_blockSize, readRez);
-        if (readRez == BufferedFileReader::DATA_NOT_READY || readRez == BufferedFileReader::DATA_DELAYED)
+        // If TrueHD was preserved while waiting for AC-3, restore it and skip a new read
+        // so setBuffer cannot append/replace over still-needed samples.
+        if (mergeReader && mergeReader->hasPreservedThd())
         {
-            m_lastAVRez = readRez;
-            return readRez;
+            mergeReader->restorePreservedThd();
+            m_notificated = false;
         }
-        if (readRez == BufferedFileReader::DATA_EOF)
-            m_isEOF = true;
-        m_streamReader->setBuffer(m_data, m_blockSize, m_isEOF);
-        m_readCnt += m_blockSize;
-        m_notificated = false;
+        else
+        {
+            m_data = m_dataReader->readBlock(m_readerID, m_blockSize, readRez);
+            if (readRez == BufferedFileReader::DATA_NOT_READY || readRez == BufferedFileReader::DATA_DELAYED)
+            {
+                m_lastAVRez = readRez;
+                return readRez;
+            }
+            if (readRez == BufferedFileReader::DATA_EOF)
+                m_isEOF = true;
+            m_streamReader->setBuffer(m_data, m_blockSize, m_isEOF);
+            m_readCnt += m_blockSize;
+            m_notificated = false;
+        }
     }
     return readRez;
 }
@@ -1713,6 +1730,7 @@ uint8_t* ContainerToReaderWrapper::readBlock(const int readerID, uint32_t& readC
     else if (demuxerData.lastReadRez[pid] != DATA_DELAYED || demuxerData.m_allFragmented)
     {
         int demuxRez;
+        bool bufferFull = false;
         do
         {
             int64_t discardSize = 0;
@@ -1725,16 +1743,19 @@ uint8_t* ContainerToReaderWrapper::readBlock(const int readerID, uint32_t& readC
                 {
                     string ext = strToUpperCase(extractFileExt(demuxerData.m_streamName));
                     if (ext != "MOV" && ext != "MP4" && ext != "M4V" && ext != "M4A")
-                        THROW(ERR_CONTAINER_STREAM_NOT_SYNC,
-                              "Reading buffer overflow. Possible container streams are not syncronized. Please, verify "
-                              "stream fps. File name: "
-                                  << demuxerData.m_streamName)
+                    {
+                        // Sibling tracks (e.g. video + TrueHD while fetching merge AC-3) can fill
+                        // faster than they are drained. Yield DELAYED so consumers can catch up
+                        // instead of aborting the mux.
+                        bufferFull = true;
+                        break;
+                    }
                 }
             }
             m_discardedSize += discardSize;
             readCnt = static_cast<uint32_t>((FFMIN(streamData.size(), nFileBlockSize) - m_readBuffOffset));
-        } while (demuxRez == 0 && readCnt < MIN_READED_BLOCK && policy != DemuxerReadPolicy::drpFragmented &&
-                 !m_terminated);
+        } while (!bufferFull && demuxRez == 0 && readCnt < MIN_READED_BLOCK &&
+                 policy != DemuxerReadPolicy::drpFragmented && !m_terminated);
 
         demuxerData.lastReadCnt[pid] = readCnt;
         data = streamData.data();
@@ -1744,6 +1765,8 @@ uint8_t* ContainerToReaderWrapper::readBlock(const int readerID, uint32_t& readC
         }
         else if (demuxerData.m_demuxer->getLastReadRez() == DATA_EOF)
             rez = DATA_EOF;
+        else if (bufferFull)
+            rez = DATA_DELAYED;
         else
         {
             if (policy == DemuxerReadPolicy::drpReadSequence)

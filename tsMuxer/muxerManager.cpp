@@ -192,7 +192,8 @@ void MuxerManager::checkTrackList(const vector<StreamInfo>& ci) const
         else if (si.m_codec == mlpCodecInfo.programName)
         {
             mlpFound = true;
-            if (si.m_addParams.find("merge-ac3-track") != si.m_addParams.end())
+            if (si.m_addParams.find("merge-ac3-track") != si.m_addParams.end() ||
+                si.m_addParams.find("merge-ac3-file") != si.m_addParams.end())
                 mlpMergedWithAc3 = true;
         }
     }

@@ -12,8 +12,8 @@
 #include "avPacket.h"
 #include "mlpStreamReader.h"
 
-// Interleaves a standalone TrueHD (A_MLP) track with a separate AC-3 track from the
-// same MKV for Blu-ray–style TrueHD + core muxing (merge-ac3-track meta option).
+// Interleaves a standalone TrueHD (A_MLP) track with a separate AC-3 track/file
+// for Blu-ray–style TrueHD + core muxing (merge-ac3-track / merge-ac3-file).
 
 class TrueHDAC3MergeReader final : public MLPStreamReader
 {
@@ -23,10 +23,15 @@ class TrueHDAC3MergeReader final : public MLPStreamReader
     TrueHDAC3MergeReader& operator=(const TrueHDAC3MergeReader&) = delete;
 
     [[nodiscard]] int mergeAc3TrackPid() const { return m_mergeAc3Pid; }
+    [[nodiscard]] bool mergeFromFile() const { return m_mergeFromFile; }
+    [[nodiscard]] bool ac3Eof() const { return m_ac3Eof; }
+    [[nodiscard]] bool hasPreservedThd() const { return m_tmpBufferLen > 0; }
 
     void setNewStyleAudioPES(bool value) { m_useNewStyleAudioPES = value; }
 
     void setAc3SideData(const uint8_t* data, uint32_t len);
+    void setAc3Eof();
+    void restorePreservedThd();
 
     const CodecInfo& getCodecInfo() override;
     int readPacket(AVPacket& avPacket) override;
@@ -45,9 +50,13 @@ class TrueHDAC3MergeReader final : public MLPStreamReader
 
     void extractAc3FramesFromAccum();
     void fillDelayedFromQueue();
+    void preserveUnconsumedThd();
+    int requestMoreAc3Data();
 
     int m_mergeAc3Pid;
+    bool m_mergeFromFile;
     bool m_useNewStyleAudioPES;
+    bool m_ac3Eof;
 
     std::vector<uint8_t> m_ac3Accum;
     std::deque<Ac3QueuedFrame> m_ac3FrameQueue;

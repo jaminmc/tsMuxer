@@ -12,7 +12,9 @@
 
 TrueHDAC3MergeReader::TrueHDAC3MergeReader(const std::map<std::string, std::string>& addParams)
     : m_mergeAc3Pid(0),
+      m_mergeFromFile(false),
       m_useNewStyleAudioPES(false),
+      m_ac3Eof(false),
       m_thdDemuxWaitAc3(true),
       m_demuxedTHDSamplesForAc3(0),
       m_nextAc3Time(0),
@@ -27,6 +29,8 @@ TrueHDAC3MergeReader::TrueHDAC3MergeReader(const std::map<std::string, std::stri
         THROW(ERR_INVALID_CODEC_FORMAT, "internal: TrueHDAC3MergeReader without merge-ac3-* source")
     if (itTrack != addParams.end() && !itTrack->second.empty())
         m_mergeAc3Pid = strToInt32(itTrack->second.c_str());
+    if (itFile != addParams.end() && !itFile->second.empty())
+        m_mergeFromFile = true;
 }
 
 const CodecInfo& TrueHDAC3MergeReader::getCodecInfo() { return trueHDCodecInfo; }
@@ -39,6 +43,43 @@ void TrueHDAC3MergeReader::setAc3SideData(const uint8_t* data, const uint32_t le
     m_ac3Accum.resize(off + len);
     memcpy(m_ac3Accum.data() + off, data, len);
     extractAc3FramesFromAccum();
+}
+
+void TrueHDAC3MergeReader::setAc3Eof()
+{
+    m_ac3Eof = true;
+    extractAc3FramesFromAccum();
+}
+
+void TrueHDAC3MergeReader::preserveUnconsumedThd()
+{
+    if (m_curPos >= m_bufEnd)
+        return;
+    const size_t left = static_cast<size_t>(m_bufEnd - m_curPos);
+    if (left > m_tmpBuffer.size())
+        m_tmpBuffer.resize(left);
+    memmove(m_tmpBuffer.data(), m_curPos, left);
+    m_tmpBufferLen = static_cast<int64_t>(left);
+    m_curPos = m_bufEnd;
+}
+
+void TrueHDAC3MergeReader::restorePreservedThd()
+{
+    if (m_tmpBufferLen <= 0)
+        return;
+    m_curPos = m_buffer = m_tmpBuffer.data();
+    m_bufEnd = m_buffer + m_tmpBufferLen;
+    m_tmpBufferLen = 0;
+}
+
+int TrueHDAC3MergeReader::requestMoreAc3Data()
+{
+    if (m_ac3Eof)
+        return -1;
+    // SimplePacketizerReader::setBuffer replaces the active buffer. Preserve any
+    // unconsumed TrueHD so the next setBuffer appends instead of dropping it.
+    preserveUnconsumedThd();
+    return AbstractStreamReader::NEED_MORE_DATA;
 }
 
 void TrueHDAC3MergeReader::extractAc3FramesFromAccum()
@@ -109,7 +150,7 @@ int TrueHDAC3MergeReader::readPacket(AVPacket& avPacket)
 {
     while (true)
     {
-        // Priority 1: Return pending AC3 packet if waiting for it
+        // Priority 1: Return pending delayed AC3 packet if waiting for it
         if (m_thdDemuxWaitAc3 && !m_delayedAc3Buffer.isEmpty())
         {
             avPacket = m_delayedAc3Packet;
@@ -123,7 +164,7 @@ int TrueHDAC3MergeReader::readPacket(AVPacket& avPacket)
             return 0;
         }
 
-        // Priority 2: Return AC3 frame if we're in AC3 wait state and have queued frames
+        // Priority 2: Return queued AC3 frame if waiting and delayed buffer empty
         if (m_thdDemuxWaitAc3 && m_delayedAc3Buffer.isEmpty() && !m_ac3FrameQueue.empty())
         {
             Ac3QueuedFrame q = std::move(m_ac3FrameQueue.front());
@@ -147,29 +188,48 @@ int TrueHDAC3MergeReader::readPacket(AVPacket& avPacket)
             return 0;
         }
 
-        // Priority 3: Need more AC3 data if waiting and don't have any
+        // Priority 3: Need more AC3 data if waiting and none queued
         if (m_thdDemuxWaitAc3 && m_ac3FrameQueue.empty())
-            return AbstractStreamReader::NEED_MORE_DATA;
+        {
+            const int need = requestMoreAc3Data();
+            if (need >= 0)
+                return need;
+            // AC3 EOF: continue emitting remaining TrueHD without further core frames
+            m_thdDemuxWaitAc3 = false;
+        }
 
-        // Priority 4: Pre-fill delayed buffer for next AC3 emission when not waiting
-        if (!m_thdDemuxWaitAc3 && m_delayedAc3Buffer.isEmpty() && !m_ac3FrameQueue.empty())
-            fillDelayedFromQueue();
+        // Priority 4: Keep one AC3 frame pre-buffered so the next sync point can emit it.
+        // This also forces periodic AC3 reads so the side track cannot starve.
+        if (!m_thdDemuxWaitAc3 && m_delayedAc3Buffer.isEmpty())
+        {
+            if (m_ac3FrameQueue.empty())
+            {
+                const int need = requestMoreAc3Data();
+                if (need >= 0)
+                    return need;
+            }
+            else
+                fillDelayedFromQueue();
+        }
 
         // Read next TrueHD packet
         const int rez = SimplePacketizerReader::readPacket(avPacket);
         if (rez != 0)
             return rez;
 
+        if (m_samplerate <= 0)
+            return 0;
+
         avPacket.dts = avPacket.pts = m_totalTHDSamples * INTERNAL_PTS_FREQ / m_samplerate;
 
         m_totalTHDSamples += m_samples;
         m_demuxedTHDSamplesForAc3 += m_samples;
-        // Trigger AC3 wait when we have enough TrueHD samples and AC3 frames available
-        if (m_ac3SamplesPerSyncFrame > 0 && m_demuxedTHDSamplesForAc3 >= m_ac3SamplesPerSyncFrame &&
-            !m_ac3FrameQueue.empty())
+        if (m_ac3SamplesPerSyncFrame > 0 && m_demuxedTHDSamplesForAc3 >= m_ac3SamplesPerSyncFrame)
         {
             m_demuxedTHDSamplesForAc3 -= m_ac3SamplesPerSyncFrame;
-            m_thdDemuxWaitAc3 = true;
+            // After AC-3 EOF, emit remaining TrueHD without waiting for more core frames.
+            if (!m_ac3Eof || !m_ac3FrameQueue.empty() || !m_delayedAc3Buffer.isEmpty())
+                m_thdDemuxWaitAc3 = true;
         }
         return 0;
     }
@@ -180,7 +240,7 @@ int TrueHDAC3MergeReader::flushPacket(AVPacket& avPacket)
     const int rez = MLPStreamReader::flushPacket(avPacket);
     if (rez > 0)
     {
-        if (!(avPacket.flags & AVPacket::PRIORITY_DATA))
+        if (!(avPacket.flags & AVPacket::PRIORITY_DATA) && m_samplerate > 0)
             avPacket.pts = avPacket.dts = m_totalTHDSamples * INTERNAL_PTS_FREQ / m_samplerate;
     }
     return rez;
@@ -207,7 +267,10 @@ void TrueHDAC3MergeReader::writePESExtension(PESPacket* pesPacket, const AVPacke
 const std::string TrueHDAC3MergeReader::getStreamInfo()
 {
     std::ostringstream str;
-    str << "TRUE-HD + AC-3 core (merged from track " << m_mergeAc3Pid << "). ";
+    if (m_mergeFromFile)
+        str << "TRUE-HD + AC-3 core (merged from file). ";
+    else
+        str << "TRUE-HD + AC-3 core (merged from track " << m_mergeAc3Pid << "). ";
     str << MLPStreamReader::getStreamInfo();
     return str.str();
 }

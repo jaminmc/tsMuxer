@@ -222,9 +222,11 @@ int AC3StreamReader::readPacketTHD(AVPacket& avPacket)
 
             m_totalTHDSamples += mlp.m_samples;
             m_demuxedTHDSamples += mlp.m_samples;
-            if (m_demuxedTHDSamples >= mlp.m_samples)
+            // Wait for the next AC-3 core after enough TrueHD samples to cover one AC-3 frame
+            // (typically 1536 samples). Comparing against mlp.m_samples would trigger every AU.
+            if (m_demuxedTHDSamples >= m_samples)
             {
-                m_demuxedTHDSamples -= mlp.m_samples;
+                m_demuxedTHDSamples -= m_samples;
                 m_thdDemuxWaitAc3 = true;
             }
             return 0;
