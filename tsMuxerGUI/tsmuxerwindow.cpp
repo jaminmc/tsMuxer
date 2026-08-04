@@ -26,15 +26,20 @@
 
 namespace QtCompat
 {
-inline QString strLeft(const QString& str, qsizetype n) { return str.first(n); }
+// QString::first/last/sliced are Qt6-only; keep Qt5 builds working via left/right/mid.
+inline QString strLeft(const QString& str, int n) { return str.left(n); }
 
-inline QString strRight(const QString& str, qsizetype n) { return str.last(n); }
+inline QString strRight(const QString& str, int n) { return str.right(n); }
 
-inline QString strMid(const QString& str, qsizetype pos, qsizetype len = -1)
+inline QString strMid(const QString& str, int pos, int len = -1) { return str.mid(pos, len); }
+
+inline QString translationsPath()
 {
-    if (len < 0)
-        return str.sliced(pos);
-    return str.sliced(pos, len);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+#else
+    return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+#endif
 }
 }  // namespace QtCompat
 
@@ -2082,7 +2087,7 @@ void TsMuxerWindow::updateMuxTime2()
 void TsMuxerWindow::onLanguageComboBoxIndexChanged(int idx)
 {
     auto lang = ui->languageSelectComboBox->itemData(idx).toString();
-    (void)qtCoreTranslator.load(QString("qtbase_%1").arg(lang), QLibraryInfo::path(QLibraryInfo::TranslationsPath));
+    (void)qtCoreTranslator.load(QString("qtbase_%1").arg(lang), QtCompat::translationsPath());
     (void)tsMuxerTranslator.load(QString("tsmuxergui_%1").arg(lang), ":/i18n");
     QFile aboutContent(QString(":/about_%1.html").arg(lang));
     if (aboutContent.open(QIODevice::ReadOnly))

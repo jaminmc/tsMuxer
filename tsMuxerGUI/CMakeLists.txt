@@ -5,15 +5,15 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6
-  REQUIRED COMPONENTS Widgets LinguistTools
-  OPTIONAL_COMPONENTS Multimedia)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
+find_package(Qt${QT_VERSION_MAJOR} QUIET COMPONENTS Multimedia)
 
 # When cross-compiling for macOS, the pre-built Qt cmake config may reference
 # the deprecated AGL framework which is absent from modern/osxcross SDKs.
 # The reference lives in Qt's internal WrapOpenGL target (created by
 # Qt6GuiDependencies.cmake) and propagates transitively through Qt6::Gui.
-if(APPLE AND CMAKE_CROSSCOMPILING)
+if(APPLE AND CMAKE_CROSSCOMPILING AND QT_VERSION_MAJOR EQUAL 6)
   # The pre-built Qt cmake config references the deprecated AGL framework
   # which is absent from modern/osxcross SDKs.  Strip it from Qt's internal
   # WrapOpenGL target (created by Qt6GuiDependencies.cmake).
@@ -32,16 +32,18 @@ if(APPLE AND CMAKE_CROSSCOMPILING)
   set(CMAKE_AUTORCC_OPTIONS "--no-zstd")
 endif()
 
-set(tsmuxer_gui_libs Qt6::Widgets)
+set(tsmuxer_gui_libs Qt${QT_VERSION_MAJOR}::Widgets)
 
-# Linux static builds in our Docker environment can have Qt6Multimedia
+# Linux static builds in our Docker environment can have QtMultimedia
 # available without its runtime backend deps (e.g. PulseAudio), which causes
 # link failures. Keep multimedia optional and skip it for that build flavor.
-if(Qt6Multimedia_FOUND)
+set(TSMUXER_HAS_MULTIMEDIA FALSE)
+if(TARGET Qt${QT_VERSION_MAJOR}::Multimedia)
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND TSMUXER_STATIC_BUILD)
-    message(STATUS "Qt6Multimedia found but disabled for static Linux build")
+    message(STATUS "Qt${QT_VERSION_MAJOR} Multimedia found but disabled for static Linux build")
   else()
-    list(APPEND tsmuxer_gui_libs Qt6::Multimedia)
+    list(APPEND tsmuxer_gui_libs Qt${QT_VERSION_MAJOR}::Multimedia)
+    set(TSMUXER_HAS_MULTIMEDIA TRUE)
   endif()
 endif()
 
@@ -58,7 +60,11 @@ set(tsmuxer_ts_files
 set(lang_qrc "translations.qrc")
 configure_file(${lang_qrc} ${lang_qrc} COPYONLY)
 
-qt6_add_translation(QM_FILES ${tsmuxer_ts_files})
+if(QT_VERSION_MAJOR EQUAL 6)
+  qt6_add_translation(QM_FILES ${tsmuxer_ts_files})
+else()
+  qt5_add_translation(QM_FILES ${tsmuxer_ts_files})
+endif()
 
 set(tsmuxer_gui_sources
   main.cpp
@@ -104,7 +110,18 @@ elseif (UNIX)
           RENAME tsMuxerGUI.png)
 endif()
 
+# Qt 5.15 is happier compiling as C++17; the CLI can stay on C++20.
+if(QT_VERSION_MAJOR EQUAL 5)
+  set_target_properties(tsMuxerGUI PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED TRUE)
+endif()
+
 target_link_libraries(tsMuxerGUI ${tsmuxer_gui_libs})
+
+# QSoundEffect is gated on QT_MULTIMEDIA_LIB in the sources; ensure CMake builds
+# define it when Multimedia is actually linked (qmake used to do this).
+if(TSMUXER_HAS_MULTIMEDIA)
+  target_compile_definitions(tsMuxerGUI PRIVATE QT_MULTIMEDIA_LIB=1)
+endif()
 
 # On macOS, ensure tsMuxeR CLI is built before the GUI (for the copy step)
 if (APPLE)

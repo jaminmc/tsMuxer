@@ -42,6 +42,12 @@ if(WIN32)
   add_definitions(-DUNICODE -D_UNICODE)
 endif()
 
+# Target Windows 7 APIs/tooling for Win32 Qt5 builds (see windows_32.yml).
+option(TSMUXER_WIN7 "Define WINVER/_WIN32_WINNT for Windows 7" OFF)
+if(TSMUXER_WIN7 AND MSVC)
+  add_compile_definitions(WINVER=0x0601 _WIN32_WINNT=0x0601)
+endif()
+
 if(TSMUXER_STATIC_BUILD AND UNIX)
   list(INSERT CMAKE_FIND_LIBRARY_SUFFIXES 0 .a)
   list(REMOVE_DUPLICATES CMAKE_FIND_LIBRARY_SUFFIXES)
@@ -63,15 +69,15 @@ endif()
 add_subdirectory(libmediation)
 add_subdirectory(tsMuxer)
 
-# Auto-detect Qt6 and enable the GUI by default if found
+# Auto-detect Qt6/Qt5 and enable the GUI by default if found
 if(NOT DEFINED TSMUXER_GUI)
-  find_package(Qt6 QUIET COMPONENTS Widgets)
-  if(Qt6_FOUND)
+  find_package(QT NAMES Qt6 Qt5 QUIET COMPONENTS Widgets)
+  if(QT_FOUND)
     set(TSMUXER_GUI TRUE)
-    message(STATUS "Qt6 found - GUI will be built (disable with -DTSMUXER_GUI=OFF)")
+    message(STATUS "Qt${QT_VERSION_MAJOR} found - GUI will be built (disable with -DTSMUXER_GUI=OFF)")
   else()
     set(TSMUXER_GUI FALSE)
-    message(STATUS "Qt6 not found - GUI will not be built (install Qt6 or set -DTSMUXER_GUI=ON)")
+    message(STATUS "Qt not found - GUI will not be built (install Qt6/Qt5 or set -DTSMUXER_GUI=ON)")
   endif()
 endif()
 
