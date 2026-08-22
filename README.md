@@ -1,6 +1,44 @@
 # tsMuxer
 
-> **Note:** This is a modernized fork of [justdan96/tsMuxer](https://github.com/justdan96/tsMuxer), updated to C++20 with Qt6 support.
+> **⚠️ This repository is archived and no longer maintained.**
+>
+> Active development has moved to the official fork maintained by **teaching-droid**:
+>
+> **→ https://github.com/teaching-droid/tsMuxer**
+>
+> Please use that repository for the latest code, releases, issues, and pull requests.
+
+---
+
+### A note from the previous maintainer
+
+Thank you to everyone who used, tested, reported issues, or contributed to this fork.
+
+I originally forked [justdan96/tsMuxer](https://github.com/justdan96/tsMuxer) because I was hitting real-world problems with the existing code and needed several missing features for my own workflows. Over time this fork grew into a substantial modernization and feature set, including:
+
+* Full migration to **C++20** and **Qt6**
+* **Matroska (MKV/MKA) muxing** support
+* **AV1** video support (with correct temporal-unit bundling, keyframe flags, and Duration)
+* **Opus** and **FLAC** audio support
+* TrueHD + AC-3 core merging for Blu-ray-compliant output (`merge-ac3-track` / `merge-ac3-file`)
+* Many stability and correctness fixes (audio/video sync in MKV/MP4/MOV, AAC & TrueHD/MLP descriptors, MP4/MOV files > 4 GB, race conditions in the buffered writer, HEVC/MOV parsing, etc.)
+* GUI improvements (editable meta files, language selector for video tracks, preservation of custom Blu-ray chapters, Windows 7 Qt5 builds, etc.)
+* Modernized CI, native platform builds, and automatic release artifacts
+
+I no longer have the time to continue as maintainer. **teaching-droid** has done an excellent job of picking up the project, adding significant new capabilities (especially multi-layer Blu-ray authoring), and keeping it moving forward. I am therefore designating their repository as the official continuation of this work.
+
+Please star, watch, and contribute to:
+
+**https://github.com/teaching-droid/tsMuxer**
+
+Thank you again for your support.
+
+— jaminmc
+
+---
+
+> **Note:**  
+> This was a modernized fork of [justdan96/tsMuxer](https://github.com/justdan96/tsMuxer), updated to C++20 with Qt6 support.
 
 ## Vision
 
